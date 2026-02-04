@@ -1,0 +1,458 @@
+// Prisma 7 + PostgreSQL – CineVault Schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---
+enum Status {
+  ON_WATCHLIST
+  VO_UNKNOWN
+  VO_SOON
+  VB_WISHLIST
+  SHIPPING
+  PROCESSING
+  UPLOADED
+  ARCHIVED
+}
+
+enum Priority {
+  HIGH
+  STANDARD
+  LOW
+}
+
+enum MediaType {
+  UHD_4K
+  BLURAY
+  DVD
+}
+
+enum Genre {
+  DRAMA
+  KOMOEDIE
+  THRILLER
+  SERIE
+  KRIMI
+  HORROR
+  ACTION
+  DOKU
+  ADULT_18
+  DEUTSCHER_FILM
+  ABENTEUER
+  LOVESTORY
+  FANTASY
+  KIDS
+  ANIMATION
+  SCIFI
+  TV_FILM
+  KRIEGSFILM
+  MUSIK
+  WESTERN
+  RATGEBER
+  ANIME
+  BOLLYWOOD
+}
+
+enum TVGenre {
+  ACTION_ADVENTURE
+  ANIMATION
+  KOMOEDIE
+  KRIMI
+  DOKUMENTARFILM
+  DRAMA
+  FAMILIE
+  KIDS
+  MYSTERY
+  NEWS
+  REALITY
+  SCIFI_FANTASY
+  SOAP
+  TALK
+  WAR_POLITICS
+  WESTERN
+}
+
+// === Series (TV Show root) ===
+model Series {
+  id            Int     @id @default(autoincrement())
+  title         String  @db.VarChar(191)
+  originalTitle String? @db.VarChar(191)
+  firstAirYear  Int?
+  inProduction  Boolean?
+  statusText    String? @db.VarChar(64)
+
+  posterUrl           String? @db.VarChar(1024)
+  backdropUrl         String? @db.VarChar(1024)
+  accentColor         String? @db.VarChar(12)
+  accentColorBackdrop String? @db.VarChar(12)
+
+  tmdbId   Int?    @unique
+  homepage String? @db.VarChar(500)
+  overview String? @db.VarChar(4000)
+  tagline  String? @db.VarChar(255)
+  fsk      Int?
+
+  status           Status   @default(ON_WATCHLIST)
+  priority         Priority @default(STANDARD)
+  assignedToUserId Int?
+  assignedToUser   User?    @relation("AssignedSeries", fields: [assignedToUserId], references: [id])
+
+  genres SeriesGenre[]
+
+  addedAt DateTime @default(now())
+
+  seasons  Season[]
+  episodes Episode[]
+  labels   MediaLabel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([title])
+  @@index([firstAirYear])
+  @@index([status])
+  @@index([priority])
+  @@index([tmdbId])
+}
+
+// === Season (Staffel) ===
+model Season {
+  id       Int    @id @default(autoincrement())
+  seriesId Int
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  seasonNumber Int
+  name         String  @db.VarChar(191)
+  overview     String? @db.VarChar(4000)
+
+  posterUrl           String? @db.VarChar(1024)
+  accentColor         String? @db.VarChar(12)
+  accentColorBackdrop String? @db.VarChar(12)
+
+  airDate      DateTime?
+  tmdbSeasonId Int?     @unique
+  episodeCount Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  episodes Episode[]
+
+  @@unique([seriesId, seasonNumber])
+  @@index([seriesId, seasonNumber])
+}
+
+// === Episode ===
+model Episode {
+  id       Int    @id @default(autoincrement())
+  seriesId Int
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  seasonId Int
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  seasonNumber  Int
+  episodeNumber Int
+
+  title      String    @db.VarChar(255)
+  overview   String?   @db.VarChar(4000)
+  runtimeMin Int?
+  airDate    DateTime?
+
+  stillUrl    String? @db.VarChar(1024)
+  accentColor String? @db.VarChar(12)
+
+  tmdbEpisodeId Int? @unique
+
+  files File[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  checkSum        String? @db.VarChar(500)
+  sizeBeforeBytes BigInt?
+  sizeAfterBytes  BigInt?
+
+  @@unique([seriesId, seasonNumber, episodeNumber])
+  @@index([seriesId, seasonNumber, episodeNumber])
+  @@index([airDate])
+}
+
+// === SeriesGenre ===
+model SeriesGenre {
+  seriesId Int
+  genre    TVGenre
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@id([seriesId, genre])
+}
+
+// === Collection ===
+model Collection {
+  id                  Int     @id @default(autoincrement())
+  name                String  @db.VarChar(191)
+  posterUrl           String? @db.VarChar(1024)
+  coverUrl            String? @db.VarChar(1024)
+  backdropUrl         String? @db.VarChar(1024)
+  accentColor         String? @db.VarChar(12)
+  accentColorBackdrop String? @db.VarChar(12)
+  overview            String? @db.VarChar(4000)
+  movies              Movie[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name], map: "idx_collection_name")
+}
+
+// === Movie ===
+model Movie {
+  id Int @id @default(autoincrement())
+
+  title               String  @db.VarChar(191)
+  releaseYear         Int
+  runtimeMin          Int
+  posterUrl           String? @db.VarChar(1024)
+  accentColor         String? @db.VarChar(12)
+  accentColorBackdrop String? @db.VarChar(12)
+
+  tmdbId Int? @unique
+
+  backdropUrl String? @db.VarChar(1024)
+  tagline     String? @db.VarChar(255)
+  overview    String? @db.VarChar(4000)
+
+  status           Status    @default(ON_WATCHLIST)
+  priority         Priority  @default(STANDARD)
+  assignedToUserId Int?
+  assignedToUser   User?    @relation("AssignedMovies", fields: [assignedToUserId], references: [id])
+  genres           MovieGenre[]
+  quality          String?  @db.VarChar(32)
+  mediaType        MediaType?
+
+  fsk             Int?
+  sizeBeforeBytes BigInt?
+  sizeAfterBytes  BigInt?
+
+  vbSentAt       DateTime?
+  vbReceivedAt   DateTime?
+  videobusterUrl String?   @db.VarChar(500)
+
+  addedAt DateTime @default(now())
+
+  collectionId Int?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+
+  files  File[]
+  labels MediaLabel[]
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  checkSum      String?             @db.VarChar(500)
+  statusChanges MovieStatusChange[]
+
+  @@index([collectionId])
+  @@index([addedAt])
+  @@index([status])
+  @@index([priority])
+  @@index([mediaType])
+  @@index([fsk])
+  @@index([title], map: "idx_movie_title")
+}
+
+// === MovieGenre ===
+model MovieGenre {
+  movieId Int
+  genre   Genre
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genre])
+}
+
+// === File (Movie ODER Episode) ===
+model File {
+  id Int @id @default(autoincrement())
+
+  movieId   Int?
+  movie     Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  episodeId Int?
+  episode   Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  resolution String? @db.VarChar(32)
+  codec      String? @db.VarChar(64)
+  audio      String? @db.VarChar(64)
+  sizeBytes  BigInt?
+  path       String  @db.VarChar(1024)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([movieId])
+  @@index([episodeId])
+}
+
+// --- Auth & User ---
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id                 Int      @id @default(autoincrement())
+  email              String   @unique
+  password           String   @db.VarChar(255)
+  name               String   @db.VarChar(191)
+  role               Role     @default(VIEWER)
+  isMasterAdmin      Boolean  @default(false)
+  mustChangePassword Boolean  @default(false)
+  locked             Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  profileImageKey    String? @db.VarChar(1024)
+  profileBannerKey   String? @db.VarChar(1024)
+  profileBannerColor String? @db.VarChar(12)
+
+  sessions             Session[]
+  assignedMovies       Movie[]              @relation("AssignedMovies")
+  assignedSeries       Series[]             @relation("AssignedSeries")
+  contentFilters       UserLabelPreference[]
+  notificationsEnabled Boolean              @default(false)
+  movieStatusChanges   MovieStatusChange[]
+  statusPreferences    UserStatusPreference[]
+
+  apiKeys ApiKey[]
+}
+
+model ApiKey {
+  id                   String    @id @default(cuid())
+  sshPublicKey         String    @db.Text
+  userId               Int
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label                String?   @db.VarChar(191)
+  fingerprint          String?   @db.VarChar(255)
+  createdAt            DateTime  @default(now())
+  lastUsed             DateTime?
+  expiresAt            DateTime?
+  lastSuccessfulAuth   DateTime?
+  failedAttempts       Int       @default(0)
+
+  authChallenges AuthChallenge[]
+}
+
+model AuthChallenge {
+  id        String   @id @default(cuid())
+  nonce     String   @unique @db.VarChar(255)
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  sid       String   @unique @db.VarChar(255)
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      String   @db.Text
+  expiresAt DateTime
+
+  ipAddress  String?   @db.VarChar(45)
+  userAgent  String?   @db.Text
+  isCurrent  Boolean   @default(false)
+  lastSeenAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserStatusPreference {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  status Status @default(ON_WATCHLIST)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, status])
+  @@index([userId])
+  @@map("user_status_preferences")
+}
+
+model MovieStatusChange {
+  id      Int   @id @default(autoincrement())
+  movieId Int
+  movie   Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  from      Status
+  to        Status
+  changedAt DateTime @default(now())
+
+  delivered   Boolean   @default(false)
+  deliveredAt DateTime?
+
+  changedBy     Int?
+  changedByUser User?   @relation(fields: [changedBy], references: [id])
+
+  @@index([movieId])
+  @@index([changedAt])
+  @@index([movieId, changedAt])
+  @@index([delivered])
+}
+
+// --- Labels ---
+model Label {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(191)
+  name        String   @db.VarChar(191)
+  description String? @db.VarChar(1024)
+  createdAt   DateTime @default(now())
+
+  mediaLinks MediaLabel[]
+  userPrefs  UserLabelPreference[]
+}
+
+model MediaLabel {
+  id       Int  @id @default(autoincrement())
+  movieId  Int?
+  seriesId Int?
+  labelId  Int
+
+  movie  Movie?  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  series Series? @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  label  Label   @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, labelId])
+  @@unique([seriesId, labelId])
+  @@index([movieId])
+  @@index([seriesId])
+  @@index([labelId])
+}
+
+enum PreferenceMode {
+  EXCLUDE
+}
+
+model UserLabelPreference {
+  id      Int            @id @default(autoincrement())
+  userId  Int
+  labelId Int
+  mode    PreferenceMode @default(EXCLUDE)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, labelId, mode])
+  @@index([userId, mode])
+  @@index([labelId])
+}
