@@ -166,7 +166,8 @@ async function main() {
   if (!dbUrl && process.env.POSTGRES_HOST && process.env.POSTGRES_USER && process.env.POSTGRES_DB) {
     const enc = encodeURIComponent;
     const p = process.env;
-    dbUrl = `postgresql://${enc(p.POSTGRES_USER!)}:${p.POSTGRES_PASSWORD ? enc(p.POSTGRES_PASSWORD) : ""}@${p.POSTGRES_HOST}:${p.POSTGRES_PORT ?? "5432"}/${enc(p.POSTGRES_DB)}`;
+    const db = p.POSTGRES_DB ?? "";
+    dbUrl = `postgresql://${enc(p.POSTGRES_USER!)}:${p.POSTGRES_PASSWORD ? enc(p.POSTGRES_PASSWORD) : ""}@${p.POSTGRES_HOST}:${p.POSTGRES_PORT ?? "5432"}/${enc(db)}`;
   }
   if (!dbUrl) {
     console.error("DATABASE_URL oder POSTGRES_HOST/POSTGRES_USER/POSTGRES_DB fehlt in .env");
