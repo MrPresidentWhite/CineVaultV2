@@ -203,57 +203,61 @@ export function MovieEditModal({ movie, users }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="rounded-xl border border-ring bg-panel p-5 min-w-0">
               <h4 className="text-lg font-semibold text-text">Videobuster</h4>
-              <div className="modal-fieldset-body mt-4">
-                <div className="field-row">
-                  <span className="field-row__label">Ausgang</span>
-                  <input
-                    type="date"
-                    name="vbSentAt"
-                    defaultValue={movie.ui.vbSentAt ?? ""}
-                    className="input"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn--primary btn--compact"
-                    onClick={() => {
-                      const inp = formRef.current?.querySelector(
-                        'input[name="vbSentAt"]'
-                      ) as HTMLInputElement;
-                      if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                    }}
-                  >
-                    Heute
-                  </button>
-                </div>
-                <div className="field-row">
-                  <span className="field-row__label">Eingang</span>
-                  <input
-                    type="date"
-                    name="vbReceivedAt"
-                    defaultValue={movie.ui.vbReceivedAt ?? ""}
-                    className="input"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn--primary btn--compact"
-                    onClick={() => {
-                      const inp = formRef.current?.querySelector(
-                        'input[name="vbReceivedAt"]'
-                      ) as HTMLInputElement;
-                      if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                    }}
-                  >
-                    Heute
-                  </button>
-                </div>
-                <label className="field-row field-row--full">
-                  <span className="field-row__label">Videobuster URL</span>
+              <div className="mt-4 flex flex-col gap-4">
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">Ausgang</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      name="vbSentAt"
+                      defaultValue={movie.ui.vbSentAt ?? ""}
+                      className="input w-full flex-1 min-w-0"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--compact shrink-0"
+                      onClick={() => {
+                        const inp = formRef.current?.querySelector(
+                          'input[name="vbSentAt"]'
+                        ) as HTMLInputElement;
+                        if (inp) inp.value = new Date().toISOString().slice(0, 10);
+                      }}
+                    >
+                      Heute
+                    </button>
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">Eingang</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      name="vbReceivedAt"
+                      defaultValue={movie.ui.vbReceivedAt ?? ""}
+                      className="input w-full flex-1 min-w-0"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--compact shrink-0"
+                      onClick={() => {
+                        const inp = formRef.current?.querySelector(
+                          'input[name="vbReceivedAt"]'
+                        ) as HTMLInputElement;
+                        if (inp) inp.value = new Date().toISOString().slice(0, 10);
+                      }}
+                    >
+                      Heute
+                    </button>
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">Videobuster URL</span>
                   <input
                     type="url"
                     name="videobusterUrl"
                     defaultValue={movie.ui.videobusterUrl ?? ""}
                     placeholder="https://www.videobuster.de/..."
-                    className="input"
+                    className="input w-full"
                   />
                 </label>
               </div>
