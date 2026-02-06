@@ -13,9 +13,13 @@ log() {
 mkdir -p /app/logs
 log "=== Container CMD started ==="
 
+if [ -z "$DATABASE_URL" ]; then
+  log "WARN: DATABASE_URL is empty in container (check .env and docker-compose environment)"
+fi
+
 log "Running Prisma migrations..."
-# DATABASE_URL explizit an Prisma übergeben (wird sonst im su-exec-Kindprozess nicht gesetzt)
-if ! su-exec nextjs env DATABASE_URL="$DATABASE_URL" npx prisma migrate deploy 2>> "$LOG"; then
+# Migrations als root laufen lassen, damit die volle Container-Env (DATABASE_URL von docker-compose) ankommt
+if ! npx prisma migrate deploy 2>> "$LOG"; then
   log "ERROR: Prisma migrate deploy failed. See $LOG"
   exit 1
 fi
