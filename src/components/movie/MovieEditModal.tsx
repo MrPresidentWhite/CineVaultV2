@@ -121,7 +121,7 @@ export function MovieEditModal({ movie, users }: Props) {
             <div className="grid-2">
               <label>
                 <span>Von Wem</span>
-                <select name="assignedToUserId" defaultValue={movie.assignedToUser?.id ?? ""}>
+                <select name="assignedToUserId" className="input" defaultValue={movie.assignedToUser?.id ?? ""}>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} | {u.role}
@@ -131,7 +131,18 @@ export function MovieEditModal({ movie, users }: Props) {
               </label>
               <label>
                 <span>Status</span>
-                <select name="status" defaultValue={movie.status}>
+                <select
+                  name="status"
+                  className="input"
+                  defaultValue={movie.status}
+                  onChange={(e) => {
+                    if (e.target.value === "SHIPPING") {
+                      const today = new Date().toISOString().slice(0, 10);
+                      const sent = formRef.current?.querySelector('input[name="vbSentAt"]') as HTMLInputElement;
+                      if (sent) sent.value = today;
+                    }
+                  }}
+                >
                   {(Object.entries(statusLabels) as [Status, string][]).map(
                     ([value, label]) => (
                       <option key={value} value={value}>
@@ -143,7 +154,7 @@ export function MovieEditModal({ movie, users }: Props) {
               </label>
               <label>
                 <span>Priorität</span>
-                <select name="priority" defaultValue={movie.priority}>
+                <select name="priority" className="input" defaultValue={movie.priority}>
                   {(Object.entries(priorityLabels) as [Priority, string][]).map(
                     ([value, label]) => (
                       <option key={value} value={value}>
@@ -155,7 +166,7 @@ export function MovieEditModal({ movie, users }: Props) {
               </label>
               <label>
                 <span>Medientyp</span>
-                <select name="mediaType" defaultValue={movie.mediaType ?? ""}>
+                <select name="mediaType" className="input" defaultValue={movie.mediaType ?? ""}>
                   <option value="">–</option>
                   {(Object.entries(mediaTypeLabels) as [MediaType, string][]).map(
                     ([value, label]) => (
@@ -175,55 +186,51 @@ export function MovieEditModal({ movie, users }: Props) {
 
           <div className="fieldset">
             <div className="fieldset__legend">Videobuster</div>
-            <div className="grid-2">
-              <label>
-                <span>Ausgang</span>
-                <div className="grid-2">
-                  <input
-                    type="date"
-                    name="vbSentAt"
-                    defaultValue={movie.ui.vbSentAt ?? ""}
-                    className="input"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={() => {
-                      const inp = formRef.current?.querySelector(
-                        'input[name="vbSentAt"]'
-                      ) as HTMLInputElement;
-                      if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                    }}
-                  >
-                    Heute
-                  </button>
-                </div>
-              </label>
-              <label>
-                <span>Eingang</span>
-                <div className="grid-2">
-                  <input
-                    type="date"
-                    name="vbReceivedAt"
-                    defaultValue={movie.ui.vbReceivedAt ?? ""}
-                    className="input"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={() => {
-                      const inp = formRef.current?.querySelector(
-                        'input[name="vbReceivedAt"]'
-                      ) as HTMLInputElement;
-                      if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                    }}
-                  >
-                    Heute
-                  </button>
-                </div>
-              </label>
-              <label>
-                <span>Videobuster URL</span>
+            <div className="modal-fieldset-body">
+              <div className="field-row">
+                <span className="field-row__label">Ausgang</span>
+                <input
+                  type="date"
+                  name="vbSentAt"
+                  defaultValue={movie.ui.vbSentAt ?? ""}
+                  className="input"
+                />
+                <button
+                  type="button"
+                  className="btn btn--primary btn--compact"
+                  onClick={() => {
+                    const inp = formRef.current?.querySelector(
+                      'input[name="vbSentAt"]'
+                    ) as HTMLInputElement;
+                    if (inp) inp.value = new Date().toISOString().slice(0, 10);
+                  }}
+                >
+                  Heute
+                </button>
+              </div>
+              <div className="field-row">
+                <span className="field-row__label">Eingang</span>
+                <input
+                  type="date"
+                  name="vbReceivedAt"
+                  defaultValue={movie.ui.vbReceivedAt ?? ""}
+                  className="input"
+                />
+                <button
+                  type="button"
+                  className="btn btn--primary btn--compact"
+                  onClick={() => {
+                    const inp = formRef.current?.querySelector(
+                      'input[name="vbReceivedAt"]'
+                    ) as HTMLInputElement;
+                    if (inp) inp.value = new Date().toISOString().slice(0, 10);
+                  }}
+                >
+                  Heute
+                </button>
+              </div>
+              <label className="field-row field-row--full">
+                <span className="field-row__label">Videobuster URL</span>
                 <input
                   type="url"
                   name="videobusterUrl"

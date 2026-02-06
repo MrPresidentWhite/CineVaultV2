@@ -76,14 +76,14 @@ export default async function DashboardLayout({
       className="fixed inset-0 z-[5] flex bg-bg text-text"
       style={{ top: "var(--header-height)" }}
     >
-      {/* Sidebar – fest stehend, unterhalb der Navbar */}
+      {/* Sidebar – fest stehend, unterhalb der Navbar; einheitlicher Abstand um „Dashboard“ */}
       <aside className="flex h-full w-56 shrink-0 flex-col border-r border-ring bg-panel min-h-0">
-        <div className="shrink-0 p-4 border-b border-ring">
+        <div className="shrink-0 px-4 pt-3 pb-1.5 border-b border-ring">
           <Link href="/dashboard" className="font-semibold text-lg text-text no-underline hover:text-accent transition">
             Dashboard
           </Link>
         </div>
-        <nav className="min-h-0 flex-1 overflow-y-auto p-3 space-y-0.5" aria-label="Dashboard-Navigation">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pt-1.5 pb-3 space-y-0.5" aria-label="Dashboard-Navigation">
           <DashboardSidebarNav nav={nav} adminNav={adminNav} />
         </nav>
         <div className="mt-auto shrink-0 border-t border-ring p-3">

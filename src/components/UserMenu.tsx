@@ -147,7 +147,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         )}
         {user.canEditor && (
           <Link
-            href="/dashboard/admin/import"
+            href="/dashboard/import/movies"
             className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
             onClick={() => setOpen(false)}
           >
