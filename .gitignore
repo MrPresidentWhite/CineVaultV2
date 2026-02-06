@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.secrets/
 
 # debug
 npm-debug.log*
@@ -38,9 +39,6 @@ yarn-error.log*
 .env.production.local
 .env.docker.prepared
 !.env.example
-
-# App-Start-Logs (Docker-Bind-Mount auf dem Server)
-app-logs/
 
 # vercel
 .vercel

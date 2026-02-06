@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, ROLE_COOKIE_NAME } from "@/lib/session/config";
+import { getSessionFromStore } from "@/lib/session/store";
 import {
   normalizeUrl,
   isIgnoredPath,
@@ -23,12 +24,8 @@ const BACK_URL_COOKIE = "backUrl";
 /** Wohin umleiten, wenn Rolle nicht ausreicht (Dashboard statt Login, da bereits eingeloggt). */
 const FORBIDDEN_REDIRECT = "/dashboard";
 
-/** Pfade, die ohne Session erreichbar sind. */
-const PUBLIC_PATHS = [
-  "/",
-  "/login",
-  "/api/auth",
-] as const;
+/** Pfade, die ohne Session erreichbar sind. "/" ist bewusst nicht dabei – in Prod ohne Login → /login. */
+const PUBLIC_PATHS = ["/login", "/api/auth"] as const;
 
 /** Präfixe, die immer erlaubt sind (_next, static). */
 const ALLOWED_PREFIXES = ["/_next", "/favicon", "/assets"];
@@ -85,7 +82,7 @@ function applyBackNav(request: NextRequest, response: NextResponse): void {
   });
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sid = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const isDev =
@@ -93,7 +90,18 @@ export function proxy(request: NextRequest) {
       (process.env.ENVIRONMENT ?? "prod").toLowerCase()
     );
 
-  if (!sid) {
+  /** Kein Cookie oder Session in DB ungültig/abgelaufen → wie nicht angemeldet behandeln. */
+  let sessionValid = false;
+  if (sid) {
+    try {
+      const session = await getSessionFromStore(sid);
+      sessionValid = session != null && session.userId != null;
+    } catch {
+      sessionValid = false;
+    }
+  }
+
+  if (!sessionValid) {
     const shouldAutoLogin = isDev && pathname === "/";
     if (isPublicPath(pathname) && !shouldAutoLogin) {
       const res = NextResponse.next();

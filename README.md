@@ -20,14 +20,13 @@ Diese Version (V2) ist ein kompletter Neuaufbau mit **Next.js 16**, **Prisma**, 
 
 ## Tech-Stack
 
-| Bereich        | Technologie                    |
-|----------------|--------------------------------|
-| Frontend/Backend | Next.js 16 (App Router)      |
-| Datenbank     | PostgreSQL (Prisma)            |
-| Cache/Session | Redis (ioredis)                |
-| Storage       | Cloudflare R2 (S3-kompatibel)  |
-| E-Mail        | Nodemailer (SMTP)              |
-| Deployment    | Docker, Nginx (Reverse Proxy)  |
+| Bereich          | Technologie               |
+|------------------|---------------------------|
+| Frontend/Backend | Next.js 16 (App Router)   |
+| Datenbank        | PostgreSQL (Prisma)      |
+| Cache/Session    | Redis (ioredis)           |
+| Storage          | Cloudflare R2 (S3-kompatibel) |
+| E-Mail           | Nodemailer (SMTP)         |
 
 ---
 
@@ -47,7 +46,7 @@ Diese Version (V2) ist ein kompletter Neuaufbau mit **Next.js 16**, **Prisma**, 
    npm ci
    ```
 
-2. `.env` aus `.env.example` anlegen und anpassen (mindestens `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `TMDB_API_KEY`).
+2. `.env` aus `.env.example` anlegen und anpassen (mindestens `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `REDIS_HOST`/`REDIS_PASS`/`REDIS_PORT`, `SESSION_SECRET`, `TMDB_API_KEY`).
 
 3. Datenbank erstellen und Migrations ausführen:
 
@@ -77,45 +76,33 @@ Diese Version (V2) ist ein kompletter Neuaufbau mit **Next.js 16**, **Prisma**, 
 
 ---
 
-## Deployment (Docker)
+## Deployment (PM2 auf eigenem Server)
 
-Der Stack läuft mit **Docker Compose**: App, Postgres, Redis und **Nginx** (Reverse Proxy mit Cache).
+Ohne Docker: Node 20+, PostgreSQL, Redis und **PM2** auf dem Server. Nach Push auf `main` deployt GitHub Actions per SSH (`deploy.sh`).
 
-1. `.env` auf dem Server anlegen (siehe `.env.docker.example` + `.env.example`).
-2. Stack starten:
+### Einmalig auf dem Server
 
+1. Repo klonen (z. B. `/opt/CineVaultV2`), `.env` anlegen (siehe `.env.example`, u. a. `POSTGRES_*`, `REDIS_*`).
+2. **Node 20+** und **PM2** installieren (z. B. `npm i -g pm2` oder über nvm).
+3. **PostgreSQL** und **Redis** laufen lassen (lokal oder separat).
+4. Einmal manuell deployen:
    ```bash
-   docker compose up -d --build
+   cd /opt/CineVaultV2
+   ./deploy.sh
    ```
+   Danach läuft die App unter PM2 (Name: `cinevaultv2`). Port z. B. 3000; davor ggf. Nginx als Reverse Proxy.
 
-   Zugriff über **Nginx** (Port 80); die App ist nur intern erreichbar.
+### Automatischer Deploy (GitHub Actions)
 
-### Inhalte des Stacks
+Bei Push auf `main` führt die Action `deploy.sh` per SSH aus. **Secrets** in GitHub: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, optional `APP_DIR` (Default: `/opt/CineVaultV2`).
 
-- **postgres** – PostgreSQL 17 (Volume `postgres_data`)
-- **redis** – Redis 7 (Volume `redis_data`)
-- **app** – Next.js (Standalone), Prisma Migrations beim Start; Start-Log auf Host unter `./app-logs/start.log` (siehe Abschnitt „Logs bei 502 / Restart-Loop“)
-- **nginx** – Reverse Proxy, Cache für `/_next/static`, `/assets` (Volumes: `./nginx/conf.d`, `nginx_cache`, `nginx_logs`)
+- **deploy.sh** – Git pull, `npm ci --include=dev`, Prisma generate/migrate, `next build`, dann **ein** PM2-Block: `pm2 restart` (bzw. `pm2 start` beim ersten Mal). Kein doppelter Reload, kein `prune`, damit `next start` zuverlässig läuft.
+- **ecosystem.config.cjs** – PM2-App `cinevaultv2`, Start: `next start` aus Projektroot (`.env` wird dort geladen).
 
-Nginx-Config ist unter `nginx/conf.d/` editierbar; nach Änderung: `docker compose restart nginx`.
+### Weitere Optionen
 
-### Deploy per GitHub Actions
-
-Bei Push auf `main` wird per SSH auf dem Server `deploy.sh` ausgeführt (Git Pull + `docker compose up -d --build`). Benötigte Secrets: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, `APP_DIR`. Siehe `.github/workflows/deploy.yml`.
-
-### Logs bei 502 / Restart-Loop
-
-Wenn du **502** siehst oder der **App-Container** ständig neu startet (`docker ps` zeigt `cinevault-app` im Restart-Loop), schreibt der Entrypoint trotzdem in eine Datei auf dem Host:
-
-```bash
-cd APP_DIR   # dein Projektverzeichnis auf dem Server
-cat app-logs/start.log
-```
-
-Darin siehst du, ob der Container gestartet ist, ob **Prisma Migrations** durchlaufen und wo es ggf. abbricht (z. B. fehlende `DATABASE_URL`, Migrations-Fehler, Node-Start). Auch bei sofortigem Absturz bleibt mindestens die Zeile `=== Container CMD started ===` in der Datei.
-
-- **Migrations-Fehler:** `.env` prüfen (`POSTGRES_*`, `DATABASE_URL` wird von docker-compose aus `POSTGRES_*` gesetzt).
-- **Keine Logs in `docker compose logs app`:** Nutze `app-logs/start.log` wie oben.
+- **Vercel** – Repo verbinden, Next.js wird dort gebaut und gehostet.
+- **Andere PaaS** – Build: `npm run build`, Start: `npm run start`; `.env` setzen.
 
 ---
 
@@ -127,10 +114,8 @@ Darin siehst du, ob der Container gestartet ist, ob **Prisma Migrations** durchl
 │   ├── app/          # App Router (Seiten, API-Routen)
 │   ├── components/   # React-Komponenten
 │   └── lib/          # DB, Auth, Storage, TMDb, E-Mail, etc.
-├── nginx/            # Nginx-Config (Proxy, Cache)
-├── Dockerfile
-├── docker-compose.yml
-└── deploy.sh
+├── package.json
+└── next.config.ts
 ```
 
 ---

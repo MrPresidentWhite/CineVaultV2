@@ -1,8 +1,10 @@
 /**
  * Server-seitige Umgebungsvariablen.
- * DATABASE_URL wird von Prisma (prisma.config.ts) verwendet.
- * REDIS_URL für Redis-Client (z. B. ioredis) bei Session/Cache.
+ * DB/Redis: entweder DATABASE_URL bzw. REDIS_URL oder die Einzel-Keys (POSTGRES_*, REDIS_*).
  */
+
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 function getEnv(key: string): string | undefined {
   return process.env[key];
@@ -16,8 +18,30 @@ function getEnvRequired(key: string): string {
   return value;
 }
 
-/** Datenbank-URL für Prisma (PostgreSQL). Wird auch in prisma.config.ts gelesen. */
-export const DATABASE_URL = getEnv("DATABASE_URL");
+function buildDatabaseUrl(): string | undefined {
+  const host = getEnv("POSTGRES_HOST");
+  const user = getEnv("POSTGRES_USER");
+  const password = getEnv("POSTGRES_PASSWORD");
+  const db = getEnv("POSTGRES_DB");
+  const port = getEnv("POSTGRES_PORT") ?? "5432";
+  if (!host || !user || !db) return undefined;
+  const enc = encodeURIComponent;
+  return `postgresql://${enc(user)}:${password ? enc(password) : ""}@${host}:${port}/${enc(db)}`;
+}
+
+function buildRedisUrl(): string | undefined {
+  const host = getEnv("REDIS_HOST") ?? "127.0.0.1";
+  const pass = getEnv("REDIS_PASS");
+  const port = getEnv("REDIS_PORT") ?? "6379";
+  if (pass && pass !== "") {
+    return `redis://:${encodeURIComponent(pass)}@${host}:${port}`;
+  }
+  return `redis://${host}:${port}`;
+}
+
+/** Datenbank-URL für Prisma (PostgreSQL). Aus DATABASE_URL oder aus POSTGRES_* gebaut. */
+export const DATABASE_URL =
+  getEnv("DATABASE_URL") ?? buildDatabaseUrl();
 
 /** Umgebung (dev/prod) – z. B. für Dev-Autologin. */
 export const ENVIRONMENT = getEnv("ENVIRONMENT") ?? "prod";
@@ -34,8 +58,9 @@ export const SESSION_SECRET =
 /** Secret für Cron-Endpoints (z. B. Session-Cleanup). Vercel setzt es beim Cron-Aufruf als Bearer-Token. */
 export const CRON_SECRET = getEnv("CRON_SECRET");
 
-/** Redis-URL für Session/Cache (z. B. redis://127.0.0.1:6379). */
-export const REDIS_URL = getEnv("REDIS_URL") ?? "redis://127.0.0.1:6379";
+/** Redis-URL für Session/Cache. Aus REDIS_URL oder aus REDIS_HOST/REDIS_PASS/REDIS_PORT gebaut. */
+export const REDIS_URL =
+  getEnv("REDIS_URL") ?? buildRedisUrl() ?? "redis://127.0.0.1:6379";
 
 /** Redis-Passwort, falls gesetzt. */
 export const REDIS_PASS = getEnv("REDIS_PASS");
@@ -104,8 +129,26 @@ export const ARGON2_HASH_LENGTH = Math.max(
   16,
   Math.min(128, parseInt(getEnv("ARGON2_HASH_LENGTH") ?? "32", 10) || 32)
 );
-/** Optionaler Pepper (geheim halten, bei Rotation alle Passwörter neu hashen). */
-export const PASSWORD_PEPPER = getEnv("PASSWORD_PEPPER") ?? "";
+/**
+ * Optionaler Pepper (geheim halten, bei Rotation alle Passwörter neu hashen).
+ * Bei Sonderzeichen ($, ", #, …) in .env: PASSWORD_PEPPER_FILE setzen (Pfad zu Datei, Inhalt = Pepper).
+ */
+function getPasswordPepper(): string {
+  const fromFile = getEnv("PASSWORD_PEPPER_FILE");
+  if (fromFile) {
+    try {
+      const path = resolve(process.cwd(), fromFile);
+      if (existsSync(path)) {
+        const raw = readFileSync(path, "utf-8");
+        return raw.replace(/\r?\n$/, ""); // nur abschließenden Zeilenumbruch entfernen
+      }
+    } catch {
+      /* Fallback auf PASSWORD_PEPPER */
+    }
+  }
+  return getEnv("PASSWORD_PEPPER") ?? "";
+}
+export const PASSWORD_PEPPER = getPasswordPepper();
 
 /* --- SMTP (E-Mail-Benachrichtigungen) --- */
 export const SMTP_HOST = getEnv("SMTP_HOST");
@@ -130,8 +173,14 @@ export function getRedisUrl(required = false): string {
 
 /**
  * Gibt DATABASE_URL zurück; wirft, wenn sie fehlt.
- * Für Migrations/CLI nutzt Prisma prisma.config.ts (dotenv).
+ * Nutzt DATABASE_URL oder baut sie aus POSTGRES_*.
  */
 export function getDatabaseUrl(): string {
-  return getEnvRequired("DATABASE_URL");
+  const url = DATABASE_URL;
+  if (!url || url === "") {
+    throw new Error(
+      "Missing DB config: set DATABASE_URL or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB (optional: POSTGRES_PORT)"
+    );
+  }
+  return url;
 }
