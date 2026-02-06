@@ -7,9 +7,21 @@
 import { prisma } from "@/lib/db";
 import { isDev, ENVIRONMENT } from "@/lib/env";
 
-const SESSION_ENV = isDev ? "dev" : (ENVIRONMENT === "prod" ? "prod" : ENVIRONMENT.toLowerCase());
+const ENV_RAW = isDev ? "dev" : (ENVIRONMENT === "prod" ? "prod" : ENVIRONMENT.toLowerCase());
+/** DB-Spalte environment ist VARCHAR(10). */
+const SESSION_ENV = ENV_RAW.slice(0, 10);
 
 const DEFAULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 Tage
+
+/** DB-Spalte ipAddress ist VARCHAR(45); x-forwarded-for kann mehrere IPs enthalten. */
+const IP_ADDRESS_MAX_LENGTH = 45;
+
+function normalizeIpAddress(ip: string | null | undefined): string | undefined {
+  if (ip == null || !ip.trim()) return undefined;
+  const first = ip.split(",")[0]?.trim() ?? ip.trim();
+  if (first.length <= IP_ADDRESS_MAX_LENGTH) return first;
+  return first.slice(0, IP_ADDRESS_MAX_LENGTH);
+}
 
 export type SessionData = {
   userId?: number;
@@ -47,13 +59,15 @@ export async function setSessionInStore(
       ? Number(session.userId)
       : null;
 
+  const ipAddress = normalizeIpAddress(meta?.ipAddress);
+
   await prisma.session.upsert({
     where: { sid },
     update: {
       data,
       expiresAt,
       userId,
-      ipAddress: meta?.ipAddress ?? undefined,
+      ipAddress,
       userAgent: meta?.userAgent ?? undefined,
       environment: SESSION_ENV,
       lastSeenAt: new Date(),
@@ -63,7 +77,7 @@ export async function setSessionInStore(
       data,
       expiresAt,
       userId,
-      ipAddress: meta?.ipAddress ?? undefined,
+      ipAddress,
       userAgent: meta?.userAgent ?? undefined,
       environment: SESSION_ENV,
       lastSeenAt: new Date(),

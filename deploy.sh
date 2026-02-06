@@ -100,6 +100,8 @@ ${PRISMA_BIN} migrate deploy
 # --------------------------------------------------------------
 
 # ----------------- Next.js Build ---------------------------------
+echo "[deploy] clean .next (vermeidet Server-Action-Mismatch nach Deploy)"
+rm -rf .next
 echo "[deploy] next build..."
 "$NPM_BIN" run -s build
 # --------------------------------------------------------------
