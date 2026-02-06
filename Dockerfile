@@ -10,6 +10,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build-Zeit: Next.js "Collecting page data" lädt API-Routen und prüft Env.
+# Platzhalter reichen; zur Laufzeit liefert docker-compose die echte .env.
+ARG DATABASE_URL=postgresql://build:build@localhost:5432/build
+ARG REDIS_URL=redis://localhost:6379
+ENV DATABASE_URL=$DATABASE_URL
+ENV REDIS_URL=$REDIS_URL
 RUN npx prisma generate
 RUN npm run build
 
