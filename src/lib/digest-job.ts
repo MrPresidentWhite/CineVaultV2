@@ -152,12 +152,12 @@ export async function sendStatusDigestJob(): Promise<void> {
         id: true,
         email: true,
         name: true,
-        UserStatusPreference: { select: { status: true } },
+        statusPreferences: { select: { status: true } },
       },
     });
 
     for (const user of users) {
-      const userStatuses = user.UserStatusPreference.map((p) => p.status);
+      const userStatuses = user.statusPreferences.map((p: { status: Status }) => p.status);
       if (userStatuses.length === 0) continue;
       const relevantSummaries = summaries.filter((s) =>
         userStatuses.includes(s.finalStatus as Status)
