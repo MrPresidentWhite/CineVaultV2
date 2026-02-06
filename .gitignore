@@ -39,6 +39,9 @@ yarn-error.log*
 .env.docker.prepared
 !.env.example
 
+# App-Start-Logs (Docker-Bind-Mount auf dem Server)
+app-logs/
+
 # vercel
 .vercel
 

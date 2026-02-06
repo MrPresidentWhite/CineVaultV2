@@ -25,6 +25,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+RUN apk add --no-cache su-exec
 
 # Standalone-Output: nur nötige Dateien
 COPY --from=builder /app/public ./public
@@ -35,10 +36,13 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./
 
-USER nextjs
+# Entrypoint schreibt in /app/logs/start.log (auf Host: ./app-logs) – auch bei Crash sichtbar
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Migrations beim Start, danach Next.js
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# Als root starten, damit /app/logs (Bind-Mount) beschreibbar ist; Entrypoint wechselt zu nextjs für App
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

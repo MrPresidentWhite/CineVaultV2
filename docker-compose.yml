@@ -51,6 +51,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cinevault}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cinevault}
       REDIS_URL: redis://:${REDIS_PASS}@redis:6379
       APP_URL: ${APP_URL:-http://localhost:3000}
+    volumes:
+      # App-Start-Log auf dem Host lesbar (z. B. cat app-logs/start.log bei 502/Restart-Loop)
+      - ./app-logs:/app/logs
 
   nginx:
     image: nginx:alpine

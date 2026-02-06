@@ -94,7 +94,7 @@ Der Stack läuft mit **Docker Compose**: App, Postgres, Redis und **Nginx** (Rev
 
 - **postgres** – PostgreSQL 17 (Volume `postgres_data`)
 - **redis** – Redis 7 (Volume `redis_data`)
-- **app** – Next.js (Standalone), Prisma Migrations beim Start
+- **app** – Next.js (Standalone), Prisma Migrations beim Start; Start-Log auf Host unter `./app-logs/start.log` (siehe Abschnitt „Logs bei 502 / Restart-Loop“)
 - **nginx** – Reverse Proxy, Cache für `/_next/static`, `/assets` (Volumes: `./nginx/conf.d`, `nginx_cache`, `nginx_logs`)
 
 Nginx-Config ist unter `nginx/conf.d/` editierbar; nach Änderung: `docker compose restart nginx`.
@@ -102,6 +102,20 @@ Nginx-Config ist unter `nginx/conf.d/` editierbar; nach Änderung: `docker compo
 ### Deploy per GitHub Actions
 
 Bei Push auf `main` wird per SSH auf dem Server `deploy.sh` ausgeführt (Git Pull + `docker compose up -d --build`). Benötigte Secrets: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, `APP_DIR`. Siehe `.github/workflows/deploy.yml`.
+
+### Logs bei 502 / Restart-Loop
+
+Wenn du **502** siehst oder der **App-Container** ständig neu startet (`docker ps` zeigt `cinevault-app` im Restart-Loop), schreibt der Entrypoint trotzdem in eine Datei auf dem Host:
+
+```bash
+cd APP_DIR   # dein Projektverzeichnis auf dem Server
+cat app-logs/start.log
+```
+
+Darin siehst du, ob der Container gestartet ist, ob **Prisma Migrations** durchlaufen und wo es ggf. abbricht (z. B. fehlende `DATABASE_URL`, Migrations-Fehler, Node-Start). Auch bei sofortigem Absturz bleibt mindestens die Zeile `=== Container CMD started ===` in der Datei.
+
+- **Migrations-Fehler:** `.env` prüfen (`POSTGRES_*`, `DATABASE_URL` wird von docker-compose aus `POSTGRES_*` gesetzt).
+- **Keine Logs in `docker compose logs app`:** Nutze `app-logs/start.log` wie oben.
 
 ---
 
