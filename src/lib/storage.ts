@@ -297,6 +297,17 @@ export async function getObject(key: string): Promise<NodeReadable | null> {
   return (res.Body as NodeReadable) ?? null;
 }
 
+/** Liest ein R2-Objekt komplett in einen Buffer (z. B. für Accent-Berechnung). */
+export async function getObjectAsBuffer(key: string): Promise<Buffer | null> {
+  const stream = await getObject(key);
+  if (!stream) return null;
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 export async function deleteObject(key: string): Promise<void> {
   const client = getR2Client();
   await client.send(
@@ -428,7 +439,13 @@ export async function ensureTmdbCached(params: {
   const cleanPath = String(filePath).replace(/^\/+/, "");
   const key = tmdbKey(cleanPath, size);
 
-  if (await tmdbKeyExistsCached(key)) return key;
+  if (await tmdbKeyExistsCached(key)) {
+    const h = await headObject(key);
+    if (h != null) return key;
+    // Cache sagt „existiert“, Objekt fehlt in R2 (z. B. anderer Bucket, gelöscht) → Cache löschen und neu laden
+    await cacheDelete(`r2:tmdb:${key}`);
+    await invalidateExistsCache(key);
+  }
 
   const srcUrl = `${TMDB_IMAGE_BASE_URL}/${size}/${cleanPath}`;
   const userAgent = `CineVault/1.0 (+${APP_URL})`;
@@ -467,6 +484,7 @@ export async function ensureTmdbCached(params: {
           ? "public, max-age=31536000, immutable"
           : "public, max-age=86400",
         sha256: sha,
+        skipIfSameHash: true,
       });
 
       await cacheSet(`r2:tmdb:${key}`, "1", R2_TMDB_KEY_CACHE_TTL);

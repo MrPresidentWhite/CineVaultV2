@@ -320,6 +320,7 @@ model User {
   profileImageKey    String? @db.VarChar(1024)
   profileBannerKey   String? @db.VarChar(1024)
   profileBannerColor String? @db.VarChar(12)
+  quickActionsJson   String? @db.Text
 
   sessions             Session[]
   assignedMovies       Movie[]              @relation("AssignedMovies")
@@ -367,14 +368,16 @@ model Session {
   data      String   @db.Text
   expiresAt DateTime
 
-  ipAddress  String?   @db.VarChar(45)
-  userAgent  String?   @db.Text
-  isCurrent  Boolean   @default(false)
-  lastSeenAt DateTime @updatedAt
-  createdAt  DateTime  @default(now())
+  ipAddress   String?   @db.VarChar(45)
+  userAgent   String?   @db.Text
+  environment String   @default("prod") @db.VarChar(10)
+  isCurrent   Boolean  @default(false)
+  lastSeenAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([environment])
 }
 
 model UserStatusPreference {

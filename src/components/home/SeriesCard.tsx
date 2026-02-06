@@ -1,0 +1,42 @@
+import Link from "next/link";
+import Image from "next/image";
+import type { HomeSeries } from "@/lib/home-data";
+import { HoverPreview } from "./HoverPreview";
+import { SeriesHoverPanel } from "./SeriesHoverPanel";
+
+export function SeriesCard({ s }: { s: HomeSeries }) {
+  const accent = s.accentColor ?? "#FFD700";
+
+  return (
+    <HoverPreview panel={<SeriesHoverPanel s={s} />} delaySec={0.8}>
+      <Link
+        href={`/series/${s.id}`}
+        className="card relative block overflow-hidden rounded-[14px] border-2 border-[#111] bg-[#101010] text-inherit no-underline transition-[transform,box-shadow,border-color] duration-[120ms] will-change-transform hover:-translate-y-0.5 hover:border-accent"
+        style={{ ["--accent" as string]: accent }}
+        aria-label={s.title}
+      >
+      {s.posterUrl ? (
+        <Image
+          src={s.posterUrl}
+          alt={s.title}
+          width={170}
+          height={255}
+          className="aspect-[2/3] w-full object-cover"
+          sizes="(min-width: 1280px) 170px, 150px"
+          unoptimized={s.posterUrl.startsWith("http")}
+        />
+      ) : (
+        <div className="aspect-[2/3] w-full bg-[#1a1a1a]" />
+      )}
+      <div className="title-overlay absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2.5">
+        <span className="block truncate text-[13px] font-semibold text-white">
+          {s.title}
+        </span>
+        {s.firstAirYear != null && (
+          <span className="text-xs text-white/80">{s.firstAirYear}</span>
+        )}
+      </div>
+    </Link>
+    </HoverPreview>
+  );
+}

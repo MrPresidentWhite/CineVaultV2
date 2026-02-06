@@ -1,9 +1,13 @@
 /**
  * Session-Store: Sessions in Prisma (DB) speichern/lesen.
  * Ersetzt express-session Store für Next.js.
+ * Im Dev-Modus: nur eine Session pro User (andere werden entfernt).
  */
 
 import { prisma } from "@/lib/db";
+import { isDev, ENVIRONMENT } from "@/lib/env";
+
+const SESSION_ENV = isDev ? "dev" : (ENVIRONMENT === "prod" ? "prod" : ENVIRONMENT.toLowerCase());
 
 const DEFAULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 Tage
 
@@ -51,6 +55,7 @@ export async function setSessionInStore(
       userId,
       ipAddress: meta?.ipAddress ?? undefined,
       userAgent: meta?.userAgent ?? undefined,
+      environment: SESSION_ENV,
       lastSeenAt: new Date(),
     },
     create: {
@@ -60,10 +65,17 @@ export async function setSessionInStore(
       userId,
       ipAddress: meta?.ipAddress ?? undefined,
       userAgent: meta?.userAgent ?? undefined,
+      environment: SESSION_ENV,
       lastSeenAt: new Date(),
       createdAt: new Date(),
     },
   });
+
+  if (isDev && userId != null) {
+    await prisma.session.deleteMany({
+      where: { userId, sid: { not: sid }, environment: "dev" },
+    });
+  }
 }
 
 export async function destroySessionInStore(sid: string): Promise<void> {
@@ -80,6 +92,15 @@ export async function touchSessionInStore(
     where: { sid },
     data: { expiresAt, lastSeenAt: new Date() },
   });
+
+  if (isDev && session.userId != null) {
+    const userId = Number(session.userId);
+    if (userId > 0) {
+      await prisma.session.deleteMany({
+        where: { userId, sid: { not: sid }, environment: "dev" },
+      });
+    }
+  }
 }
 
 /** Abgelaufene Sessions löschen (z. B. Cron). */

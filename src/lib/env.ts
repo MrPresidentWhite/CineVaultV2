@@ -22,9 +22,17 @@ export const DATABASE_URL = getEnv("DATABASE_URL");
 /** Umgebung (dev/prod) – z. B. für Dev-Autologin. */
 export const ENVIRONMENT = getEnv("ENVIRONMENT") ?? "prod";
 
+/** true wenn Dev-Modus (Autologin, etc.) – akzeptiert dev, development, developement. */
+export const isDev = ["dev", "development", "developement"].includes(
+  (getEnv("ENVIRONMENT") ?? "prod").toLowerCase()
+);
+
 /** Geheimer Schlüssel für Session-Cookie (in Produktion setzen). */
 export const SESSION_SECRET =
   getEnv("SESSION_SECRET") ?? "change-me-in-production-please";
+
+/** Secret für Cron-Endpoints (z. B. Session-Cleanup). Vercel setzt es beim Cron-Aufruf als Bearer-Token. */
+export const CRON_SECRET = getEnv("CRON_SECRET");
 
 /** Redis-URL für Session/Cache (z. B. redis://127.0.0.1:6379). */
 export const REDIS_URL = getEnv("REDIS_URL") ?? "redis://127.0.0.1:6379";
@@ -98,6 +106,17 @@ export const ARGON2_HASH_LENGTH = Math.max(
 );
 /** Optionaler Pepper (geheim halten, bei Rotation alle Passwörter neu hashen). */
 export const PASSWORD_PEPPER = getEnv("PASSWORD_PEPPER") ?? "";
+
+/* --- SMTP (E-Mail-Benachrichtigungen) --- */
+export const SMTP_HOST = getEnv("SMTP_HOST");
+export const SMTP_PORT = Number(getEnv("SMTP_PORT") ?? "587") || 587;
+export const SMTP_USER = getEnv("SMTP_USER");
+export const SMTP_PASS = getEnv("SMTP_PASS");
+export const SMTP_FROM = getEnv("SMTP_FROM") ?? SMTP_USER;
+export const SMTP_FROM_NAME = getEnv("SMTP_FROM_NAME");
+
+/* --- Discord Webhook (Status-Digest) --- */
+export const DISCORD_WEBHOOK_URL = getEnv("DISCORD_WEBHOOK_URL");
 
 /**
  * Gibt REDIS_URL zurück; wirft, wenn REDIS_URL fehlt und required true ist.

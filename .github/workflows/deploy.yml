@@ -1,0 +1,47 @@
+name: Deploy (SSH + Docker)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (für Workflow-Metadaten)
+        uses: actions/checkout@v4
+
+      - name: SSH deploy (Docker)
+        env:
+          SSH_HOST:   ${{ secrets.SSH_HOST }}
+          SSH_USER:   ${{ secrets.SSH_USER }}
+          SSH_PORT:   ${{ secrets.SSH_PORT }}
+          SSH_KEY:    ${{ secrets.SSH_KEY }}
+          APP_DIR:    ${{ secrets.APP_DIR }}
+        run: |
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+
+          ssh -i key.pem -p "${SSH_PORT:-22}" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
+            "APP_DIR='${APP_DIR}' bash -s" << 'EOF'
+            set -euo pipefail
+
+            cd "${APP_DIR:?APP_DIR fehlt}"
+
+            echo "[ci] git fetch..."
+            git fetch --all --prune
+
+            branch="$(git rev-parse --abbrev-ref HEAD || true)"
+            if [ "$branch" = "HEAD" ] || [ -z "$branch" ]; then
+              branch="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2- || echo main)"
+            fi
+
+            echo "[ci] reset to origin/${branch}"
+            git reset --hard "origin/${branch}"
+
+            chmod 755 deploy.sh || true
+            command -v dos2unix >/dev/null 2>&1 && dos2unix -q deploy.sh || true
+
+            APP_DIR="${APP_DIR}" bash ./deploy.sh
+          EOF

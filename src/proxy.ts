@@ -1,14 +1,27 @@
 /**
- * Next.js Proxy (ehem. Middleware): Geschützte Routen absichern.
- * Prüft nur das Vorhandensein des Session-Cookies (cv.sid).
- * Die eigentliche Session-Validierung erfolgt in getAuth() / getSession().
+ * Next.js Proxy (ehem. Middleware): Geschützte Routen absichern + Smart Back-Navigation.
+ * - Prüft Session-Cookie (cv.sid); Validierung in getAuth() / getSession().
+ * - Rollen-Cookie (cv.role): blockiert Routen, für die der User keine Berechtigung hat.
+ * - Pflegt Nav-Stack und setzt backUrl-Cookie für „smart“ Zurück-Buttons.
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/session/config";
+import { SESSION_COOKIE_NAME, ROLE_COOKIE_NAME } from "@/lib/session/config";
+import {
+  normalizeUrl,
+  isIgnoredPath,
+  parseNavStackCookie,
+  updateStackAndGetBack,
+} from "@/lib/backnav";
+import { getRequiredRole, hasRoleAtLeast } from "@/lib/proxy-routes";
 
 const LOGIN_PATH = "/login";
+const NAV_STACK_COOKIE = "navStack";
+const BACK_URL_COOKIE = "backUrl";
+
+/** Wohin umleiten, wenn Rolle nicht ausreicht (Dashboard statt Login, da bereits eingeloggt). */
+const FORBIDDEN_REDIRECT = "/dashboard";
 
 /** Pfade, die ohne Session erreichbar sind. */
 const PUBLIC_PATHS = [
@@ -27,21 +40,92 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
+/** Setzt Back-Nav-Cookies auf die Response (nur GET, document, nicht-ignorierte Pfade). */
+function applyBackNav(request: NextRequest, response: NextResponse): void {
+  const method = request.method;
+  const dest = request.headers.get("sec-fetch-dest") ?? "";
+  const accept = request.headers.get("accept") ?? "";
+  if (method !== "GET") return;
+  if (dest !== "document" && !accept.includes("text/html")) return;
+
+  const pathname = request.nextUrl.pathname;
+  const search = request.nextUrl.search;
+  const current = normalizeUrl(pathname + search);
+  if (isIgnoredPath(pathname)) return;
+
+  let refererNormalized: string | null = null;
+  const refererRaw = request.headers.get("referer");
+  if (refererRaw) {
+    try {
+      const refUrl = new URL(refererRaw);
+      if (refUrl.origin === request.nextUrl.origin) {
+        refererNormalized = normalizeUrl(refUrl.pathname + refUrl.search);
+      }
+    } catch {
+      /* ungültiger Referer */
+    }
+  }
+
+  const stack = parseNavStackCookie(request.cookies.get(NAV_STACK_COOKIE)?.value);
+  const backUrl = updateStackAndGetBack(stack, current, refererNormalized);
+
+  response.cookies.set(NAV_STACK_COOKIE, JSON.stringify(stack), {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+    sameSite: "lax",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  });
+  response.cookies.set(BACK_URL_COOKIE, backUrl, {
+    path: "/",
+    maxAge: 60 * 60,
+    sameSite: "lax",
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
-
   const sid = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const isDev =
+    ["dev", "development", "developement"].includes(
+      (process.env.ENVIRONMENT ?? "prod").toLowerCase()
+    );
+
   if (!sid) {
-    const loginUrl = new URL(LOGIN_PATH, request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    const shouldAutoLogin = isDev && pathname === "/";
+    if (isPublicPath(pathname) && !shouldAutoLogin) {
+      const res = NextResponse.next();
+      applyBackNav(request, res);
+      return res;
+    }
+    const target = isDev
+      ? new URL("/api/auth/dev-login", request.url)
+      : new URL(LOGIN_PATH, request.url);
+    target.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(target);
   }
 
-  return NextResponse.next();
+  const requiredRole = getRequiredRole(pathname);
+  if (requiredRole) {
+    const userRole = request.cookies.get(ROLE_COOKIE_NAME)?.value?.trim();
+    if (userRole && !hasRoleAtLeast(userRole, requiredRole)) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "Forbidden", message: "Keine Berechtigung für diese Route." },
+          { status: 403 }
+        );
+      }
+      return NextResponse.redirect(new URL(FORBIDDEN_REDIRECT, request.url), {
+        status: 302,
+      });
+    }
+  }
+
+  const res = NextResponse.next();
+  applyBackNav(request, res);
+  return res;
 }
 
 export const config = {
