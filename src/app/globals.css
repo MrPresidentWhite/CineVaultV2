@@ -796,7 +796,7 @@ hr.rounded {
 .modal__dialog {
   position: relative;
   margin: max(1rem, env(safe-area-inset-top)) auto;
-  width: min(880px, 96vw);
+  width: min(1320px, 96vw);
   max-height: calc(100dvh - 2 * max(1rem, env(safe-area-inset-top)));
   display: grid;
   grid-template-rows: auto 1fr;

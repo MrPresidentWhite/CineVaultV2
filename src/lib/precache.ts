@@ -7,8 +7,19 @@
  */
 
 import { cacheGet, cacheSet } from "./cache";
-import { DEBUG_WARMUP, WARMUP_CONCURRENCY } from "./env";
+import {
+  DEBUG_WARMUP,
+  WARMUP_CONCURRENCY,
+  WARMUP_MAX_URLS_PER_RUN,
+  WARMUP_TIMEOUT_MS,
+  WARMUP_RETRIES,
+} from "./env";
 import { toPublicUrl } from "./storage";
+
+/** Nur absolute URLs (http/https) – relative URLs würden die eigene App treffen. */
+function isAbsoluteUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -53,15 +64,19 @@ async function pMap<T, R>(
 const REDIS_PRECACHE_WARMED_PREFIX = "precache:warmed:";
 
 async function warmUrl(url: string, opts: WarmOpts = {}): Promise<void> {
-  const timeoutMs = opts.timeoutMs ?? 15_000;
-  const retries = opts.retries ?? 3;
+  const timeoutMs = opts.timeoutMs ?? WARMUP_TIMEOUT_MS;
+  const retries = opts.retries ?? WARMUP_RETRIES;
   const backoff = opts.backoffBaseMs ?? 500;
   const skipTtl = opts.skipRecentlyWarmedTtlSeconds ?? 0;
 
   if (skipTtl > 0) {
-    const cacheKey = `${REDIS_PRECACHE_WARMED_PREFIX}${url}`;
-    const recently = await cacheGet<string>(cacheKey);
-    if (recently === "1") return;
+    try {
+      const cacheKey = `${REDIS_PRECACHE_WARMED_PREFIX}${url}`;
+      const recently = await cacheGet<string>(cacheKey);
+      if (recently === "1") return;
+    } catch {
+      /* Redis-Fehler: Warmup trotzdem ausführen */
+    }
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -80,12 +95,17 @@ async function warmUrl(url: string, opts: WarmOpts = {}): Promise<void> {
 
       if ((res.status >= 200 && res.status < 300) || res.status === 304) {
         clearTimeout(to);
+        await res.arrayBuffer().catch(() => null);
         if (skipTtl > 0) {
-          await cacheSet(
-            `${REDIS_PRECACHE_WARMED_PREFIX}${url}`,
-            "1",
-            skipTtl
-          );
+          try {
+            await cacheSet(
+              `${REDIS_PRECACHE_WARMED_PREFIX}${url}`,
+              "1",
+              skipTtl
+            );
+          } catch {
+            /* Redis-Fehler ignorieren */
+          }
         }
         return;
       }
@@ -119,7 +139,10 @@ async function warmUrl(url: string, opts: WarmOpts = {}): Promise<void> {
         await sleep(wait);
         continue;
       }
-      throw err;
+      if (DEBUG_WARMUP) {
+        console.warn("[precache] skip after retries:", (e as Error)?.message ?? url);
+      }
+      return;
     }
   }
 }
@@ -142,9 +165,9 @@ export async function warmKeys(
       keys
         .filter((k): k is string => !!k && typeof k === "string")
         .map((k) => toPublicUrl(k))
-        .filter((u): u is string => !!u)
+        .filter((u): u is string => !!u && isAbsoluteUrl(u))
     )
-  );
+  ).slice(0, WARMUP_MAX_URLS_PER_RUN);
 
   if (!urls.length) return;
 

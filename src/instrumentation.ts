@@ -1,24 +1,39 @@
 /**
  * Next.js Instrumentation – läuft einmal beim Start des Node-Servers.
- * Registriert hier z. B. node-cron-Jobs:
+ * Registriert node-cron-Jobs nur in Production, Zeitzone Europe/Berlin:
  * - Session-Cleanup täglich 3:00 Uhr
  * - Status-Digest (E-Mail + Discord) täglich 10:00 und 21:00 Uhr
+ * - CDN-Warmup alle N Minuten (wenn WARMUP_ENABLED=1)
  */
+
+const CRON_TZ = "Europe/Berlin";
+
+function isProduction(): boolean {
+  if (process.env.NODE_ENV !== "production") return false;
+  const env = process.env.ENVIRONMENT?.toLowerCase();
+  return env === "prod" || env === "production" || env === undefined;
+}
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (!isProduction()) return;
 
   const cron = await import("node-cron");
+  const opts = { timezone: CRON_TZ };
 
-  cron.default.schedule("0 3 * * *", async () => {
-    try {
-      const { cleanupExpiredSessions } = await import("@/lib/session/store");
-      const deleted = await cleanupExpiredSessions();
-      console.log(`[cron] Session-Cleanup: ${deleted} abgelaufene Sessions gelöscht`);
-    } catch (e) {
-      console.error("[cron] Session-Cleanup fehlgeschlagen:", e);
-    }
-  });
+  cron.default.schedule(
+    "0 3 * * *",
+    async () => {
+      try {
+        const { cleanupExpiredSessions } = await import("@/lib/session/store");
+        const deleted = await cleanupExpiredSessions();
+        console.log(`[cron] Session-Cleanup: ${deleted} abgelaufene Sessions gelöscht`);
+      } catch (e) {
+        console.error("[cron] Session-Cleanup fehlgeschlagen:", e);
+      }
+    },
+    opts
+  );
 
   const runDigest = async () => {
     try {
@@ -29,6 +44,32 @@ export async function register() {
     }
   };
 
-  cron.default.schedule("0 10 * * *", runDigest);
-  cron.default.schedule("0 21 * * *", runDigest);
+  cron.default.schedule("0 10 * * *", runDigest, opts);
+  cron.default.schedule("0 21 * * *", runDigest, opts);
+
+  const warmupEnabled = process.env.WARMUP_ENABLED === "1";
+  const warmupMinutes = Math.max(
+    1,
+    parseInt(process.env.WARMUP_INTERVAL_MINUTES ?? "30", 10) || 30
+  );
+  if (warmupEnabled) {
+    cron.default.schedule(
+      `*/${warmupMinutes} * * * *`,
+      async () => {
+        try {
+          const { runCdnWarmup } = await import("@/lib/cdn-warmup");
+          const result = await runCdnWarmup();
+          console.log(
+            `[cron] CDN-Warmup: ${result.warmed} URLs (scope=${result.scope})`
+          );
+          if (result.errors.length > 0) {
+            console.warn("[cron] CDN-Warmup Teilfehler:", result.errors);
+          }
+        } catch (e) {
+          console.error("[cron] CDN-Warmup fehlgeschlagen:", e);
+        }
+      },
+      opts
+    );
+  }
 }

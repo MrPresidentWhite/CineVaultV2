@@ -83,14 +83,16 @@ export default async function MoviesPage({
 
   return (
     <Section title="Filme" href="/">
-      <form
-        method="GET"
-        action="/movies"
-        className="filter-card mb-4 md:mb-6"
-      >
-        <input type="hidden" name="page" value="1" />
-        <FilterSection summary="Filter anzeigen">
-        <div className="filter-grid">
+      <div className="space-y-6 md:space-y-8">
+        <section className="rounded-xl border border-ring bg-panel p-6">
+          <h2 className="text-lg font-semibold text-text">Filter</h2>
+          <p className="mt-1 text-sm text-text/60">
+            Filme nach Kriterien eingrenzen.
+          </p>
+          <form method="GET" action="/movies" className="mt-4">
+            <input type="hidden" name="page" value="1" />
+            <FilterSection summary="Filter anzeigen">
+            <div className="filter-grid">
           <label>
             <span>Suche (Titel)</span>
             <input
@@ -212,32 +214,37 @@ export default async function MoviesPage({
             Zurücksetzen
           </Link>
         </div>
-        </FilterSection>
-      </form>
+            </FilterSection>
+          </form>
+        </section>
 
-      {items.length === 0 ? (
-        <p className="text-text/80">Keine Filme gefunden.</p>
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-text/70 break-words">
-            {total} {total === 1 ? "Film" : "Filme"}
-            {totalPages > 1 && (
-              <span className="block mt-0.5 sm:inline sm:mt-0">Seite {page} von {totalPages}</span>
-            )}
-          </p>
-          <div className="cards cards--movies">
-            {items.map((m) => (
-              <MovieCard key={m.id} m={m} />
-            ))}
-          </div>
-          <Pagination
-            totalPages={totalPages}
-            currentPage={page}
-            buildHref={buildHref}
-            ariaLabel="Filme-Seiten"
-          />
-        </>
-      )}
+        <section className="rounded-xl border border-ring bg-panel p-6">
+          <h2 className="text-lg font-semibold text-text">Ergebnisse</h2>
+          {items.length === 0 ? (
+            <p className="mt-3 text-text/80">Keine Filme gefunden.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-text/60 break-words">
+                {total} {total === 1 ? "Film" : "Filme"}
+                {totalPages > 1 && (
+                  <span className="block mt-0.5 sm:inline sm:mt-0"> · Seite {page} von {totalPages}</span>
+                )}
+              </p>
+              <div className="cards cards--movies mt-5">
+                {items.map((m) => (
+                  <MovieCard key={m.id} m={m} />
+                ))}
+              </div>
+              <Pagination
+                totalPages={totalPages}
+                currentPage={page}
+                buildHref={buildHref}
+                ariaLabel="Filme-Seiten"
+              />
+            </>
+          )}
+        </section>
+      </div>
     </Section>
   );
 }

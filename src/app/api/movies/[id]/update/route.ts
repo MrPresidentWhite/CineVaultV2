@@ -51,9 +51,33 @@ export async function POST(
     data.sizeAfterBytes = BigInt(Number(body.sizeAfterBytes));
   }
 
-  const parseDate = (s: unknown) => (s && typeof s === "string" ? new Date(s) : null);
-  if (body.vbSentAt !== undefined) data.vbSentAt = parseDate(body.vbSentAt);
-  if (body.vbReceivedAt !== undefined) data.vbReceivedAt = parseDate(body.vbReceivedAt);
+  const parseOptionalDate = (
+    s: unknown,
+    fieldLabel: string
+  ): { date: Date | null; error?: string } => {
+    if (s === undefined || s === null) return { date: null };
+    if (typeof s !== "string") return { date: null, error: `${fieldLabel}: ungültiger Typ` };
+    const trimmed = s.trim();
+    if (trimmed === "") return { date: null };
+    const d = new Date(trimmed);
+    if (Number.isNaN(d.getTime())) return { date: null, error: `${fieldLabel}: ungültiges Datum` };
+    return { date: d };
+  };
+
+  if (body.vbSentAt !== undefined) {
+    const result = parseOptionalDate(body.vbSentAt, "Ausgang (vbSentAt)");
+    if (result.error) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    }
+    data.vbSentAt = result.date;
+  }
+  if (body.vbReceivedAt !== undefined) {
+    const result = parseOptionalDate(body.vbReceivedAt, "Eingang (vbReceivedAt)");
+    if (result.error) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    }
+    data.vbReceivedAt = result.date;
+  }
 
   try {
     await prisma.movie.update({ where: { id: idNum }, data: data as never });

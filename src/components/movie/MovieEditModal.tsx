@@ -61,6 +61,22 @@ export function MovieEditModal({ movie, users }: Props) {
     e.preventDefault();
     const form = formRef.current;
     if (!form) return;
+
+    const vbSentAt = (form.querySelector('input[name="vbSentAt"]') as HTMLInputElement)?.value?.trim() ?? "";
+    const vbReceivedAt = (form.querySelector('input[name="vbReceivedAt"]') as HTMLInputElement)?.value?.trim() ?? "";
+
+    const isValidDateValue = (val: string): boolean =>
+      val === "" || !Number.isNaN(new Date(val).getTime());
+
+    if (!isValidDateValue(vbSentAt)) {
+      alert("Bitte ein gültiges Datum für „Ausgang“ eingeben (z. B. JJJJ-MM-TT).");
+      return;
+    }
+    if (!isValidDateValue(vbReceivedAt)) {
+      alert("Bitte ein gültiges Datum für „Eingang“ eingeben (z. B. JJJJ-MM-TT).");
+      return;
+    }
+
     const fd = new FormData(form);
     const payload: Record<string, unknown> = Object.fromEntries(fd.entries());
     ["vbSentAt", "vbReceivedAt"].forEach((k) => {
@@ -116,12 +132,12 @@ export function MovieEditModal({ movie, users }: Props) {
           className="modal__body"
           onSubmit={handleSubmit}
         >
-          <div className="fieldset">
-            <div className="fieldset__legend">Allgemein</div>
-            <div className="grid-2">
-              <label>
-                <span>Von Wem</span>
-                <select name="assignedToUserId" className="input" defaultValue={movie.assignedToUser?.id ?? ""}>
+          <div className="rounded-xl border border-ring bg-panel p-5 mt-4 first:mt-0">
+            <h4 className="text-lg font-semibold text-text">Allgemein</h4>
+            <div className="mt-4 flex flex-col gap-4">
+              <label className="block">
+                <span className="block text-sm text-text/70 mb-1">Zugewiesen</span>
+                <select name="assignedToUserId" className="input w-full" defaultValue={movie.assignedToUser?.id ?? ""}>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} | {u.role}
@@ -129,11 +145,11 @@ export function MovieEditModal({ movie, users }: Props) {
                   ))}
                 </select>
               </label>
-              <label>
-                <span>Status</span>
+              <label className="block">
+                <span className="block text-sm text-text/70 mb-1">Status</span>
                 <select
                   name="status"
-                  className="input"
+                  className="input w-full"
                   defaultValue={movie.status}
                   onChange={(e) => {
                     if (e.target.value === "SHIPPING") {
@@ -152,9 +168,9 @@ export function MovieEditModal({ movie, users }: Props) {
                   )}
                 </select>
               </label>
-              <label>
-                <span>Priorität</span>
-                <select name="priority" className="input" defaultValue={movie.priority}>
+              <label className="block">
+                <span className="block text-sm text-text/70 mb-1">Priorität</span>
+                <select name="priority" className="input w-full" defaultValue={movie.priority}>
                   {(Object.entries(priorityLabels) as [Priority, string][]).map(
                     ([value, label]) => (
                       <option key={value} value={value}>
@@ -164,9 +180,9 @@ export function MovieEditModal({ movie, users }: Props) {
                   )}
                 </select>
               </label>
-              <label>
-                <span>Medientyp</span>
-                <select name="mediaType" className="input" defaultValue={movie.mediaType ?? ""}>
+              <label className="block">
+                <span className="block text-sm text-text/70 mb-1">Medientyp</span>
+                <select name="mediaType" className="input w-full" defaultValue={movie.mediaType ?? ""}>
                   <option value="">–</option>
                   {(Object.entries(mediaTypeLabels) as [MediaType, string][]).map(
                     ([value, label]) => (
@@ -177,116 +193,118 @@ export function MovieEditModal({ movie, users }: Props) {
                   )}
                 </select>
               </label>
-              <label>
-                <span>Qualität</span>
+              <label className="block">
+                <span className="block text-sm text-text/70 mb-1">Qualität</span>
                 <QualityField currentQ={currentQ} isKnown={isKnown} />
               </label>
             </div>
           </div>
 
-          <div className="fieldset">
-            <div className="fieldset__legend">Videobuster</div>
-            <div className="modal-fieldset-body">
-              <div className="field-row">
-                <span className="field-row__label">Ausgang</span>
-                <input
-                  type="date"
-                  name="vbSentAt"
-                  defaultValue={movie.ui.vbSentAt ?? ""}
-                  className="input"
-                />
-                <button
-                  type="button"
-                  className="btn btn--primary btn--compact"
-                  onClick={() => {
-                    const inp = formRef.current?.querySelector(
-                      'input[name="vbSentAt"]'
-                    ) as HTMLInputElement;
-                    if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                  }}
-                >
-                  Heute
-                </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="rounded-xl border border-ring bg-panel p-5 min-w-0">
+              <h4 className="text-lg font-semibold text-text">Videobuster</h4>
+              <div className="modal-fieldset-body mt-4">
+                <div className="field-row">
+                  <span className="field-row__label">Ausgang</span>
+                  <input
+                    type="date"
+                    name="vbSentAt"
+                    defaultValue={movie.ui.vbSentAt ?? ""}
+                    className="input"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--compact"
+                    onClick={() => {
+                      const inp = formRef.current?.querySelector(
+                        'input[name="vbSentAt"]'
+                      ) as HTMLInputElement;
+                      if (inp) inp.value = new Date().toISOString().slice(0, 10);
+                    }}
+                  >
+                    Heute
+                  </button>
+                </div>
+                <div className="field-row">
+                  <span className="field-row__label">Eingang</span>
+                  <input
+                    type="date"
+                    name="vbReceivedAt"
+                    defaultValue={movie.ui.vbReceivedAt ?? ""}
+                    className="input"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--compact"
+                    onClick={() => {
+                      const inp = formRef.current?.querySelector(
+                        'input[name="vbReceivedAt"]'
+                      ) as HTMLInputElement;
+                      if (inp) inp.value = new Date().toISOString().slice(0, 10);
+                    }}
+                  >
+                    Heute
+                  </button>
+                </div>
+                <label className="field-row field-row--full">
+                  <span className="field-row__label">Videobuster URL</span>
+                  <input
+                    type="url"
+                    name="videobusterUrl"
+                    defaultValue={movie.ui.videobusterUrl ?? ""}
+                    placeholder="https://www.videobuster.de/..."
+                    className="input"
+                  />
+                </label>
               </div>
-              <div className="field-row">
-                <span className="field-row__label">Eingang</span>
-                <input
-                  type="date"
-                  name="vbReceivedAt"
-                  defaultValue={movie.ui.vbReceivedAt ?? ""}
-                  className="input"
-                />
-                <button
-                  type="button"
-                  className="btn btn--primary btn--compact"
-                  onClick={() => {
-                    const inp = formRef.current?.querySelector(
-                      'input[name="vbReceivedAt"]'
-                    ) as HTMLInputElement;
-                    if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                  }}
-                >
-                  Heute
-                </button>
-              </div>
-              <label className="field-row field-row--full">
-                <span className="field-row__label">Videobuster URL</span>
-                <input
-                  type="url"
-                  name="videobusterUrl"
-                  defaultValue={movie.ui.videobusterUrl ?? ""}
-                  placeholder="https://www.videobuster.de/..."
-                  className="input"
-                />
-              </label>
             </div>
-          </div>
 
-          <div className="fieldset">
-            <div className="fieldset__legend">Encoding</div>
-            <div className="grid-2">
-              <label>
-                <span>Dateigröße vorher (Bytes)</span>
-                <input
-                  type="number"
-                  name="sizeBeforeBytes"
-                  defaultValue={
-                    movie.sizeBeforeBytes != null
-                      ? String(movie.sizeBeforeBytes)
-                      : ""
-                  }
-                  min={0}
-                  inputMode="numeric"
-                  placeholder="z. B. 80530636800"
-                  className="input"
-                />
-              </label>
-              <label>
-                <span>Dateigröße nachher (Bytes)</span>
-                <input
-                  type="number"
-                  name="sizeAfterBytes"
-                  defaultValue={
-                    movie.sizeAfterBytes != null
-                      ? String(movie.sizeAfterBytes)
-                      : ""
-                  }
-                  min={0}
-                  inputMode="numeric"
-                  placeholder="z. B. 69835161600"
-                  className="input"
-                />
-              </label>
-              <label>
-                <span>SHA256 Checksum</span>
-                <input
-                  type="text"
-                  name="checkSum"
-                  defaultValue={movie.ui.checkSum ?? ""}
-                  placeholder="z. B. b309e13ba9a40763964a388c..."
-                  className="input"
-                />
-              </label>
+            <div className="rounded-xl border border-ring bg-panel p-5 min-w-0">
+              <h4 className="text-lg font-semibold text-text">Encoding</h4>
+              <div className="mt-4 flex flex-col gap-4">
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">Größe vorher</span>
+                  <input
+                    type="number"
+                    name="sizeBeforeBytes"
+                    defaultValue={
+                      movie.sizeBeforeBytes != null
+                        ? String(movie.sizeBeforeBytes)
+                        : ""
+                    }
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="Bytes, z. B. 80530636800"
+                    className="input w-full"
+                  />
+                </label>
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">Größe nachher</span>
+                  <input
+                    type="number"
+                    name="sizeAfterBytes"
+                    defaultValue={
+                      movie.sizeAfterBytes != null
+                        ? String(movie.sizeAfterBytes)
+                        : ""
+                    }
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="Bytes, z. B. 69835161600"
+                    className="input w-full"
+                  />
+                </label>
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">SHA256</span>
+                  <input
+                    type="text"
+                    name="checkSum"
+                    defaultValue={movie.ui.checkSum ?? ""}
+                    placeholder="z. B. b309e13ba9a40763964a388c..."
+                    className="input w-full"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -316,7 +334,7 @@ function QualityField({
     <>
       <select
         id="qualitySelect"
-        className="input"
+        className="input w-full"
         defaultValue={selectValue}
         onChange={(e) => {
           const wrap = document.getElementById("qualityCustomWrap");
@@ -348,7 +366,7 @@ function QualityField({
         <input
           id="qualityCustom"
           type="text"
-          className="input"
+          className="input w-full"
           placeholder="z. B. 567p, 1080p (IMAX), …"
           defaultValue={!isKnown ? currentQ : ""}
           onChange={() => {

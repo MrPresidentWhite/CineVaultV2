@@ -110,6 +110,21 @@ export const WARMUP_CONCURRENCY = Math.max(
   1,
   parseInt(getEnv("WARMUP_CONCURRENCY") ?? "10", 10) || 10
 );
+/** Max. URLs pro Warmup-Lauf (verhindert Timeouts bei großen Beständen). */
+export const WARMUP_MAX_URLS_PER_RUN = Math.max(
+  100,
+  parseInt(getEnv("WARMUP_MAX_URLS_PER_RUN") ?? "2500", 10) || 2500
+);
+/** Timeout pro Einzel-Request in ms. */
+export const WARMUP_TIMEOUT_MS = Math.max(
+  5000,
+  parseInt(getEnv("WARMUP_TIMEOUT_MS") ?? "15000", 10) || 15000
+);
+/** Retries pro URL bei 429/5xx oder Netzwerkfehler. */
+export const WARMUP_RETRIES = Math.max(
+  0,
+  parseInt(getEnv("WARMUP_RETRIES") ?? "3", 10) || 3
+);
 export const DEBUG_WARMUP = String(getEnv("DEBUG_WARMUP") ?? "0") === "1";
 
 /* --- Argon2 (Passwort-Hashing) --- */
