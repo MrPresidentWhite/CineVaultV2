@@ -14,7 +14,8 @@ mkdir -p /app/logs
 log "=== Container CMD started ==="
 
 log "Running Prisma migrations..."
-if ! su-exec nextjs npx prisma migrate deploy 2>> "$LOG"; then
+# DATABASE_URL explizit an Prisma übergeben (wird sonst im su-exec-Kindprozess nicht gesetzt)
+if ! su-exec nextjs env DATABASE_URL="$DATABASE_URL" npx prisma migrate deploy 2>> "$LOG"; then
   log "ERROR: Prisma migrate deploy failed. See $LOG"
   exit 1
 fi
