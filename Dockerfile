@@ -1,8 +1,9 @@
 # CineVault V2 – Multi-Stage Build (Next.js standalone + Prisma)
+# deps inkl. dev (dotenv, prisma) für prisma generate + next build
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
