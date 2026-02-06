@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CineVault V2
 
-## Getting Started
+**CineVault** ist eine persönliche Film- und Serienverwaltung: Du pflegst deine Sammlung (Filme, Serien, Staffeln, Episoden), nutzt Metadaten von [TMDb](https://www.themoviedb.org/) und behältst den Überblick über Status, Qualität und Speicherplatz.
 
-First, run the development server:
+Diese Version (V2) ist ein kompletter Neuaufbau mit **Next.js 16**, **Prisma**, **PostgreSQL**, **Redis** und optional **Cloudflare R2** für Bilder.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## Was CineVault kann
+
+- **Filme & Serien** mit TMDb-Import (Poster, Backdrop, Genres, FSK, Laufzeit)
+- **Collections** (z. B. Franchises, Themen)
+- **Status-Tracking** (Wunschliste, bestellt, verarbeitet, hochgeladen, archiviert)
+- **Akzentfarben** aus Postern für ein einheitliches UI
+- **Benachrichtigungen** per E-Mail und optional Discord-Webhook bei Status-Änderungen
+- **R2/S3-Speicher** für TMDb-Bilder (Pull-Through mit Checksum, keine Duplikate)
+- **Rollen & Auth** (Admin, Editor, Nutzer)
+
+---
+
+## Tech-Stack
+
+| Bereich        | Technologie                    |
+|----------------|--------------------------------|
+| Frontend/Backend | Next.js 16 (App Router)      |
+| Datenbank     | PostgreSQL (Prisma)            |
+| Cache/Session | Redis (ioredis)                |
+| Storage       | Cloudflare R2 (S3-kompatibel)  |
+| E-Mail        | Nodemailer (SMTP)              |
+| Deployment    | Docker, Nginx (Reverse Proxy)  |
+
+---
+
+## Entwicklung
+
+### Voraussetzungen
+
+- Node.js 20+
+- PostgreSQL
+- Redis (optional, für Session/Cache)
+
+### Setup
+
+1. Repo klonen, Abhängigkeiten installieren:
+
+   ```bash
+   npm ci
+   ```
+
+2. `.env` aus `.env.example` anlegen und anpassen (mindestens `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `TMDB_API_KEY`).
+
+3. Datenbank erstellen und Migrations ausführen:
+
+   ```bash
+   npx prisma generate
+   npx prisma migrate deploy
+   ```
+
+4. Dev-Server starten:
+
+   ```bash
+   npm run dev
+   ```
+
+   App: [http://localhost:3000](http://localhost:3000)
+
+### Wichtige Skripte
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `npm run dev` | Next.js Dev-Server |
+| `npm run build` | Production-Build |
+| `npm run start` | Production-Server (nach Build) |
+| `npm run db:generate` | Prisma Client erzeugen |
+| `npm run db:migrate:deploy` | Migrations anwenden |
+| `npm run db:studio` | Prisma Studio (DB-GUI) |
+
+---
+
+## Deployment (Docker)
+
+Der Stack läuft mit **Docker Compose**: App, Postgres, Redis und **Nginx** (Reverse Proxy mit Cache).
+
+1. `.env` auf dem Server anlegen (siehe `.env.docker.example` + `.env.example`).
+2. Stack starten:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   Zugriff über **Nginx** (Port 80); die App ist nur intern erreichbar.
+
+### Inhalte des Stacks
+
+- **postgres** – PostgreSQL 17 (Volume `postgres_data`)
+- **redis** – Redis 7 (Volume `redis_data`)
+- **app** – Next.js (Standalone), Prisma Migrations beim Start
+- **nginx** – Reverse Proxy, Cache für `/_next/static`, `/assets` (Volumes: `./nginx/conf.d`, `nginx_cache`, `nginx_logs`)
+
+Nginx-Config ist unter `nginx/conf.d/` editierbar; nach Änderung: `docker compose restart nginx`.
+
+### Deploy per GitHub Actions
+
+Bei Push auf `main` wird per SSH auf dem Server `deploy.sh` ausgeführt (Git Pull + `docker compose up -d --build`). Benötigte Secrets: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, `APP_DIR`. Siehe `.github/workflows/deploy.yml`.
+
+---
+
+## Projektstruktur (Auszug)
+
+```
+├── prisma/           # Schema, Migrations
+├── src/
+│   ├── app/          # App Router (Seiten, API-Routen)
+│   ├── components/   # React-Komponenten
+│   └── lib/          # DB, Auth, Storage, TMDb, E-Mail, etc.
+├── nginx/            # Nginx-Config (Proxy, Cache)
+├── Dockerfile
+├── docker-compose.yml
+└── deploy.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Lizenz
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Privates Projekt – keine öffentliche Lizenz.

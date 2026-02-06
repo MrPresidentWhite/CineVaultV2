@@ -90,11 +90,11 @@ export async function getStats(): Promise<StatsUi> {
       }),
     ]);
 
-  const beforeSumAll = movieAgg._sum.sizeBeforeBytes ?? 0n;
-  const afterSumAll = movieAgg._sum.sizeAfterBytes ?? 0n;
+  const beforeSumAll = movieAgg._sum.sizeBeforeBytes ?? BigInt(0);
+  const afterSumAll = movieAgg._sum.sizeAfterBytes ?? BigInt(0);
   const perFilmSavedBytes: number[] = [];
   const perFilmSavedPct: number[] = [];
-  let savedTotalStrict = 0n;
+  let savedTotalStrict = BigInt(0);
   for (const m of savingsData) {
     const before = m.sizeBeforeBytes!;
     const after = m.sizeAfterBytes!;
@@ -106,7 +106,7 @@ export async function getStats(): Promise<StatsUi> {
     }
   }
   const savedPctStrict =
-    beforeSumAll > 0n ? Number(savedTotalStrict) / Number(beforeSumAll) : 0;
+    beforeSumAll > BigInt(0) ? Number(savedTotalStrict) / Number(beforeSumAll) : 0;
   const avgSavedPerFilm =
     perFilmSavedBytes.length > 0
       ? Number(savedTotalStrict) / perFilmSavedBytes.length
@@ -144,9 +144,9 @@ export async function getStats(): Promise<StatsUi> {
     const type = (g.mediaType ?? "UNKNOWN") as keyof typeof mediaAgg;
     if (type in mediaAgg) {
       mediaAgg[type].count = g._count.mediaType ?? 0;
-      const before = g._sum.sizeBeforeBytes ?? 0n;
-      const after = g._sum.sizeAfterBytes ?? 0n;
-      const savedBytes = before > after ? before - after : 0n;
+      const before = g._sum.sizeBeforeBytes ?? BigInt(0);
+      const after = g._sum.sizeAfterBytes ?? BigInt(0);
+      const savedBytes = before > after ? before - after : BigInt(0);
       mediaAgg[type].savedGB = Number(savedBytes) / 1e9;
     }
   });
