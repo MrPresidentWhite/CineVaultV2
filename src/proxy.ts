@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getPublicOrigin } from "@/lib/request-url";
 import { SESSION_COOKIE_NAME, ROLE_COOKIE_NAME } from "@/lib/session/config";
 import { getSessionFromStore } from "@/lib/session/store";
 import {
@@ -108,9 +109,10 @@ export async function proxy(request: NextRequest) {
       applyBackNav(request, res);
       return res;
     }
+    const base = getPublicOrigin(request) + "/";
     const target = isDev
-      ? new URL("/api/auth/dev-login", request.url)
-      : new URL(LOGIN_PATH, request.url);
+      ? new URL("api/auth/dev-login", base)
+      : new URL(LOGIN_PATH.startsWith("/") ? LOGIN_PATH.slice(1) : LOGIN_PATH, base);
     target.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(target);
   }
@@ -125,7 +127,8 @@ export async function proxy(request: NextRequest) {
           { status: 403 }
         );
       }
-      return NextResponse.redirect(new URL(FORBIDDEN_REDIRECT, request.url), {
+      const base = getPublicOrigin(request) + "/";
+      return NextResponse.redirect(new URL(FORBIDDEN_REDIRECT.slice(1), base), {
         status: 302,
       });
     }

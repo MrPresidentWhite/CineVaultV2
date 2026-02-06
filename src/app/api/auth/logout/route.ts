@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/request-url";
 import { getSessionIdFromCookie, destroySession, SESSION_COOKIE_NAME } from "@/lib/session";
 import { ROLE_COOKIE_NAME } from "@/lib/session/config";
 
@@ -12,8 +13,8 @@ export async function POST(request: Request) {
     await destroySession(sid);
   }
 
-  const url = new URL(request.url);
-  const response = NextResponse.redirect(new URL("/", url.origin), {
+  const base = getPublicOrigin(request) + "/";
+  const response = NextResponse.redirect(new URL("/", base), {
     status: 302,
   });
   response.cookies.set(SESSION_COOKIE_NAME, "", {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { getPublicOrigin } from "@/lib/request-url";
 import {
   createSession,
   getSessionCookieOptions,
@@ -21,11 +22,12 @@ export async function POST(request: Request) {
   const callbackUrl =
     formData.get("callbackUrl")?.toString()?.trim() || "/";
 
+  const base = getPublicOrigin(request) + "/";
   if (!email) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("E-Mail fehlt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("E-Mail fehlt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -34,8 +36,8 @@ export async function POST(request: Request) {
   if (!password) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("Passwort fehlt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("Passwort fehlt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -48,8 +50,8 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("E-Mail oder Passwort ungültig.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("E-Mail oder Passwort ungültig.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -58,8 +60,8 @@ export async function POST(request: Request) {
   if (user.locked) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("Konto ist gesperrt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("Konto ist gesperrt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -69,8 +71,8 @@ export async function POST(request: Request) {
   if (!valid) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("E-Mail oder Passwort ungültig.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("E-Mail oder Passwort ungültig.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
   );
 
   const opts = getSessionCookieOptions();
-  const response = NextResponse.redirect(new URL(callbackUrl, request.url), {
+  const response = NextResponse.redirect(new URL(callbackUrl, base), {
     status: 302,
   });
   response.cookies.set(SESSION_COOKIE_NAME, sid, {

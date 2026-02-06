@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getPublicOrigin } from "@/lib/request-url";
 import {
   createSession,
   getSessionCookieOptions,
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const callbackUrl = searchParams.get("callbackUrl")?.trim() || "/";
+  const base = getPublicOrigin(request) + "/";
 
   const masterAdmin = await prisma.user.findFirst({
     where: { isMasterAdmin: true },
@@ -31,8 +33,8 @@ export async function GET(request: Request) {
   if (!masterAdmin) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("Kein Master-Admin in der Datenbank gefunden.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("Kein Master-Admin in der Datenbank gefunden.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -41,8 +43,8 @@ export async function GET(request: Request) {
   if (masterAdmin.locked) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("Master-Admin-Konto ist gesperrt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url
+        `login?error=${encodeURIComponent("Master-Admin-Konto ist gesperrt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
       ),
       { status: 302 }
     );
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
   );
 
   const opts = getSessionCookieOptions();
-  const response = NextResponse.redirect(new URL(callbackUrl, request.url), {
+  const response = NextResponse.redirect(new URL(callbackUrl, base), {
     status: 302,
   });
   response.cookies.set(SESSION_COOKIE_NAME, sid, {
