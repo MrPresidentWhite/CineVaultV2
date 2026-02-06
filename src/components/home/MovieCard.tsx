@@ -26,7 +26,7 @@ export function MovieCard({ m }: { m: HomeMovie }) {
           width={170}
           height={255}
           className="aspect-[2/3] w-full object-cover"
-          sizes="(min-width: 1280px) 170px, 150px"
+          sizes="(max-width: 639px) 50vw, (min-width: 1280px) 170px, 150px"
           unoptimized={m.posterUrl.startsWith("http")}
         />
       ) : (

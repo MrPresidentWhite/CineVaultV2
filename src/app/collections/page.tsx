@@ -6,6 +6,7 @@ import {
 import type { CollectionListItem } from "@/lib/collection-data";
 import type { HomeCollection } from "@/lib/home-data";
 import { Section } from "@/components/home/Section";
+import { FilterSection } from "@/components/home/FilterSection";
 import { CollectionCard } from "@/components/home/CollectionCard";
 import { Pagination } from "@/components/Pagination";
 
@@ -97,10 +98,10 @@ export default async function CollectionsPage({
       <form
         method="GET"
         action="/collections"
-        className="filter-card"
-        style={{ marginBottom: "1rem" }}
+        className="filter-card mb-4 md:mb-6"
       >
         <input type="hidden" name="page" value="1" />
+        <FilterSection summary="Filter anzeigen">
         <div className="filter-grid">
           <label>
             <span>Suche (Name)</span>
@@ -174,15 +175,18 @@ export default async function CollectionsPage({
             Zurücksetzen
           </Link>
         </div>
+        </FilterSection>
       </form>
 
       {items.length === 0 ? (
         <p className="text-text/80">Keine Collections gefunden.</p>
       ) : (
         <>
-          <p className="mb-3 text-sm text-text/70">
+          <p className="mb-3 text-sm text-text/70 break-words">
             {total} {total === 1 ? "Collection" : "Collections"}
-            {totalPages > 1 && ` · Seite ${page} von ${totalPages}`}
+            {totalPages > 1 && (
+              <span className="block mt-0.5 sm:inline sm:mt-0">Seite {page} von {totalPages}</span>
+            )}
           </p>
           <div className="cards cards--collections">
             {items.map((c) => (

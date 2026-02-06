@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   description: "Deine Film- und Seriensammlung",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -58,7 +64,7 @@ export default async function RootLayout({
           <div className="hidden md:block">
             <QuickActions items={quickActionsItems} />
           </div>
-          <main className="main px-7 py-7">{children}</main>
+          <main className="main px-4 py-4 md:px-7 md:py-7">{children}</main>
         </div>
       </body>
     </html>

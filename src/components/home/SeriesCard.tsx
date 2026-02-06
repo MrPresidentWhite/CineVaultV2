@@ -22,7 +22,7 @@ export function SeriesCard({ s }: { s: HomeSeries }) {
           width={170}
           height={255}
           className="aspect-[2/3] w-full object-cover"
-          sizes="(min-width: 1280px) 170px, 150px"
+          sizes="(max-width: 639px) 50vw, (min-width: 1280px) 170px, 150px"
           unoptimized={s.posterUrl.startsWith("http")}
         />
       ) : (

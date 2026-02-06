@@ -46,7 +46,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded-[10px] border border-[#333] bg-[#1b1b1b] px-2.5 py-1.5 text-left leading-none transition hover:bg-[#222]"
+        className="inline-flex min-h-[44px] items-center gap-2 rounded-[10px] border border-[#333] bg-[#1b1b1b] px-2.5 py-2 text-left leading-none transition hover:bg-[#222] md:min-h-0 md:py-1.5"
         data-user-trigger
       >
         <span className="relative inline-block h-6 w-6 shrink-0 overflow-hidden rounded-full border border-[#2d2d2d] bg-[#949494] text-center text-[0.85rem] font-bold leading-6 text-white">
@@ -63,7 +63,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
             initial
           )}
         </span>
-        <span className="font-semibold text-white">{user.name}</span>
+        <span className="font-semibold text-white hidden sm:inline">{user.name}</span>
         <svg
           className="h-3.5 w-3.5 opacity-80"
           width="14"
@@ -79,7 +79,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         role="menu"
         tabIndex={-1}
         hidden={!open}
-        className="absolute right-0 top-[calc(100%+0.5rem)] z-[2000] min-w-[220px] rounded-xl border border-[#2d2d2d] bg-[#171717] p-2 shadow-[0_10px_24px_rgba(0,0,0,.35)]"
+        className="absolute right-0 top-[calc(100%+0.5rem)] z-[2000] max-h-[min(70vh,400px)] min-w-[220px] overflow-y-auto rounded-xl border border-[#2d2d2d] bg-[#171717] p-2 shadow-[0_10px_24px_rgba(0,0,0,.35)]"
         data-user-dropdown
       >
         <div className="mb-2 flex items-center gap-2.5 px-1 py-1">
@@ -124,14 +124,14 @@ export function UserMenu({ user }: { user: HeaderUser }) {
 
         <Link
           href="/dashboard/profile"
-          className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
+          className="flex min-h-[44px] w-full items-center rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
           onClick={() => setOpen(false)}
         >
           Dashboard / Profil
         </Link>
         <Link
           href="/dashboard/stats"
-          className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
+          className="flex min-h-[44px] w-full items-center rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
           onClick={() => setOpen(false)}
         >
           Statistiken
@@ -139,7 +139,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         {user.canAdmin && (
           <Link
             href="/dashboard/admin/users"
-            className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
+            className="flex min-h-[44px] w-full items-center rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
             onClick={() => setOpen(false)}
           >
             Benutzerverwaltung
@@ -148,7 +148,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         {user.canEditor && (
           <Link
             href="/dashboard/import/movies"
-            className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
+            className="flex min-h-[44px] w-full items-center rounded-lg px-3 py-2.5 text-left text-sm text-inherit no-underline transition hover:bg-white/[0.06]"
             onClick={() => setOpen(false)}
           >
             Film anlegen
@@ -158,7 +158,7 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         <form method="POST" action="/api/auth/logout" className="mt-0.5">
           <button
             type="submit"
-            className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-inherit transition hover:bg-white/[0.06]"
+            className="flex min-h-[44px] w-full items-center rounded-lg px-3 py-2.5 text-left text-sm text-inherit transition hover:bg-white/[0.06]"
           >
             Logout
           </button>

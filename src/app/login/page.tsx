@@ -42,8 +42,8 @@ export default async function LoginPage({
         />
       </div>
 
-      <div className="relative z-10 mx-auto mt-[8vh] w-[min(400px,90%)]">
-        <div className="flex flex-col gap-5 rounded-lg bg-black/75 p-10">
+      <div className="relative z-10 mx-auto mt-[6vh] w-[min(400px,92%)] px-2 md:mt-[8vh] md:px-0">
+        <div className="flex flex-col gap-5 rounded-lg bg-black/75 p-6 md:p-10">
           <h1 className="m-0 text-2xl font-bold text-white">Login</h1>
 
           {success && (
@@ -93,7 +93,7 @@ export default async function LoginPage({
 
             <button
               type="submit"
-              className="mt-4 rounded-md border-0 bg-gold px-4 py-3 font-bold text-black transition hover:bg-[#e6c200]"
+              className="mt-4 min-h-[48px] rounded-md border-0 bg-gold px-4 py-3 font-bold text-black transition hover:bg-[#e6c200]"
             >
               Login
             </button>

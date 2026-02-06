@@ -15,7 +15,7 @@ export function Header({ user }: HeaderProps) {
   const isLoginPage = pathname === "/login";
 
   return (
-    <header className="app-header sticky top-0 z-[1000] flex items-center gap-6 border-b border-ring bg-bg/80 px-7 py-5 backdrop-blur-[6px]">
+    <header className="app-header sticky top-0 z-[1000] flex items-center gap-3 border-b border-ring bg-bg/80 px-4 py-3 backdrop-blur-[6px] md:gap-6 md:px-7 md:py-5">
       {/* Brand */}
       <Link
         href="/"
@@ -27,7 +27,7 @@ export function Header({ user }: HeaderProps) {
           alt="CineVault"
           width={140}
           height={48}
-          className="h-8 w-auto max-w-[70%]"
+          className="h-7 w-auto max-w-[60%] md:h-8 md:max-w-[70%]"
         />
       </Link>
 

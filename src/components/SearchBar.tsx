@@ -143,15 +143,16 @@ export function SearchBar() {
 
   let flatIndex = 0;
   return (
-    <div className="search relative w-full min-w-0 max-w-[min(560px,50%)]" role="search">
+    <div className="search relative w-full min-w-0 max-w-full md:max-w-[min(560px,50%)]" role="search">
       <input
         ref={inputRef}
         type="search"
         name="q"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Suche nach Filmen, Collections oder Serien…"
-        className="search__input w-full rounded-[10px] border border-ring bg-[#0f0f0f] px-3.5 py-3 text-text outline-none placeholder:text-text/60 focus:border-ring focus:ring-2 focus:ring-ring/40"
+        placeholder="Suche…"
+        className="search__input w-full rounded-[10px] border border-ring bg-[#0f0f0f] px-3 py-2.5 text-text outline-none placeholder:text-text/60 focus:border-ring focus:ring-2 focus:ring-ring/40 md:px-3.5 md:py-3"
+        aria-label="Suche nach Filmen, Collections oder Serien"
         autoComplete="off"
         aria-autocomplete="list"
         aria-expanded={!!(open && hasResults)}
@@ -185,19 +186,20 @@ export function SearchBar() {
                   <Link
                     id={`search-option-${idx}`}
                     href={m.href}
-                    className="search-dd__link grid grid-cols-[38px_1fr_auto] gap-2.5 items-center w-full text-inherit no-underline py-2 px-2.5 rounded-lg hover:bg-white/10 focus:bg-white/10 focus:outline-none"
+                    className="search-dd__link grid grid-cols-[38px_1fr_auto] gap-2.5 items-center w-full text-inherit no-underline py-2 px-2.5 rounded-lg hover:bg-white/10 focus:bg-white/10 focus:outline-none min-h-[52px] md:min-h-0"
                   >
                     {m.poster ? (
                       <Image
                         src={m.poster}
                         alt=""
-                        width={38}
-                        height={54}
-                        className="search-dd__thumb h-[54px] w-[38px] rounded-md object-cover bg-[#0f0f0f] border border-[#2d2d2d]"
+                        width={44}
+                        height={66}
+                        className="search-dd__thumb h-[54px] w-[38px] shrink-0 rounded-md object-cover bg-[#0f0f0f] border border-[#2d2d2d] md:h-[54px] md:w-[38px]"
+                        sizes="44px"
                         unoptimized={m.poster.startsWith("http")}
                       />
                     ) : (
-                      <div className="search-dd__thumb ph h-[54px] w-[38px] rounded-md bg-[#101010] border border-[#2d2d2d]" />
+                      <div className="search-dd__thumb ph h-[54px] w-[38px] shrink-0 rounded-md bg-[#101010] border border-[#2d2d2d] md:h-[54px] md:w-[38px]" />
                     )}
                     <span className="search-dd__text min-w-0">
                       <strong className="text-[#eee]">{m.title}</strong>
@@ -224,19 +226,20 @@ export function SearchBar() {
                   <Link
                     id={`search-option-${idx}`}
                     href={c.href}
-                    className="search-dd__link grid grid-cols-[38px_1fr_auto] gap-2.5 items-center w-full text-inherit no-underline py-2 px-2.5 rounded-lg hover:bg-white/10 focus:bg-white/10 focus:outline-none"
+                    className="search-dd__link grid grid-cols-[38px_1fr_auto] gap-2.5 items-center w-full text-inherit no-underline py-2 px-2.5 rounded-lg hover:bg-white/10 focus:bg-white/10 focus:outline-none min-h-[52px] md:min-h-0"
                   >
                     {c.poster ? (
                       <Image
                         src={c.poster}
                         alt=""
-                        width={38}
-                        height={54}
-                        className="search-dd__thumb h-[54px] w-[38px] rounded-md object-cover bg-[#0f0f0f] border border-[#2d2d2d]"
+                        width={44}
+                        height={66}
+                        className="search-dd__thumb h-[54px] w-[38px] shrink-0 rounded-md object-cover bg-[#0f0f0f] border border-[#2d2d2d] md:h-[54px] md:w-[38px]"
+                        sizes="44px"
                         unoptimized={c.poster.startsWith("http")}
                       />
                     ) : (
-                      <div className="search-dd__thumb ph h-[54px] w-[38px] rounded-md bg-[#101010] border border-[#2d2d2d]" />
+                      <div className="search-dd__thumb ph h-[54px] w-[38px] shrink-0 rounded-md bg-[#101010] border border-[#2d2d2d] md:h-[54px] md:w-[38px]" />
                     )}
                     <span className="search-dd__text min-w-0">
                       <strong className="text-[#eee]">{c.name}</strong>
@@ -260,19 +263,20 @@ export function SearchBar() {
                   <Link
                     id={`search-option-${idx}`}
                     href={s.href}
-                    className="search-dd__link grid grid-cols-[38px_1fr_auto] gap-2.5 items-center w-full text-inherit no-underline py-2 px-2.5 rounded-lg hover:bg-white/10 focus:bg-white/10 focus:outline-none"
+                    className="search-dd__link grid grid-cols-[38px_1fr_auto] gap-2.5 items-center w-full text-inherit no-underline py-2 px-2.5 rounded-lg hover:bg-white/10 focus:bg-white/10 focus:outline-none min-h-[52px] md:min-h-0"
                   >
                     {s.poster ? (
                       <Image
                         src={s.poster}
                         alt=""
-                        width={38}
-                        height={54}
-                        className="search-dd__thumb h-[54px] w-[38px] rounded-md object-cover bg-[#0f0f0f] border border-[#2d2d2d]"
+                        width={44}
+                        height={66}
+                        className="search-dd__thumb h-[54px] w-[38px] shrink-0 rounded-md object-cover bg-[#0f0f0f] border border-[#2d2d2d] md:h-[54px] md:w-[38px]"
+                        sizes="44px"
                         unoptimized={s.poster.startsWith("http")}
                       />
                     ) : (
-                      <div className="search-dd__thumb ph h-[54px] w-[38px] rounded-md bg-[#101010] border border-[#2d2d2d]" />
+                      <div className="search-dd__thumb ph h-[54px] w-[38px] shrink-0 rounded-md bg-[#101010] border border-[#2d2d2d] md:h-[54px] md:w-[38px]" />
                     )}
                     <span className="search-dd__text min-w-0">
                       <strong className="text-[#eee]">{s.title}</strong>

@@ -27,26 +27,26 @@ export function Pagination({
 
   return (
     <nav
-      className="pagination mt-6 flex flex-wrap items-center justify-center gap-1.5"
+      className="pagination mt-4 flex flex-wrap items-center justify-center gap-1.5 md:mt-6"
       aria-label={ariaLabel}
     >
       {currentPage > 1 ? (
         <Link
           href={buildHref(prevPage)}
-          className="btn btn--sm"
+          className="btn btn--sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
           aria-label="Zurück"
         >
           ‹
         </Link>
       ) : (
-        <span className="btn btn--sm is-disabled" aria-hidden>
+        <span className="btn btn--sm is-disabled min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0" aria-hidden>
           ‹
         </span>
       )}
 
       {from > 1 && (
         <>
-          <Link href={buildHref(1)} className="btn btn--sm">
+          <Link href={buildHref(1)} className="btn btn--sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
             1
           </Link>
           {from > 2 && <span className="px-1.5 opacity-70">…</span>}
@@ -57,13 +57,13 @@ export function Pagination({
         p === currentPage ? (
           <span
             key={p}
-            className="btn btn--sm btn--primary"
+            className="btn btn--sm btn--primary min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
             aria-current="page"
           >
             {p}
           </span>
         ) : (
-          <Link key={p} href={buildHref(p)} className="btn btn--sm">
+          <Link key={p} href={buildHref(p)} className="btn btn--sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
             {p}
           </Link>
         )
@@ -72,7 +72,7 @@ export function Pagination({
       {to < totalPages && (
         <>
           {to < totalPages - 1 && <span className="px-1.5 opacity-70">…</span>}
-          <Link href={buildHref(totalPages)} className="btn btn--sm">
+          <Link href={buildHref(totalPages)} className="btn btn--sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
             {totalPages}
           </Link>
         </>
@@ -81,13 +81,13 @@ export function Pagination({
       {currentPage < totalPages ? (
         <Link
           href={buildHref(nextPage)}
-          className="btn btn--sm"
+          className="btn btn--sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
           aria-label="Weiter"
         >
           ›
         </Link>
       ) : (
-        <span className="btn btn--sm is-disabled" aria-hidden>
+        <span className="btn btn--sm is-disabled min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0" aria-hidden>
           ›
         </span>
       )}

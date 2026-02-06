@@ -26,7 +26,7 @@ export function CollectionCard({ c }: { c: HomeCollection }) {
           width={320}
           height={180}
           className="aspect-video w-full object-cover"
-          sizes="(min-width: 1280px) 320px, 280px"
+          sizes="(max-width: 639px) 100vw, (min-width: 1280px) 320px, 280px"
           unoptimized={c.coverUrl.startsWith("http")}
         />
       ) : (
