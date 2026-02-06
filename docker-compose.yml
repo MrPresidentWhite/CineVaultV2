@@ -1,5 +1,6 @@
 # CineVault V2 – App + Postgres + Redis (ein Stack, persistente Volumes)
 # Vor dem Start: .env aus .env.docker.example anlegen und anpassen.
+# Hostname für andere Container = Service-Name (z. B. "postgres"), nicht container_name.
 
 services:
   postgres:
@@ -48,7 +49,8 @@ services:
       - "3000"
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cinevault}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cinevault}
+      # Host "postgres" = Service-Name (Docker-DNS), nicht container_name
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://:${REDIS_PASS}@redis:6379
       APP_URL: ${APP_URL:-http://localhost:3000}
     volumes:

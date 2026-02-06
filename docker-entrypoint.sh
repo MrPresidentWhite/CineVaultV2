@@ -17,8 +17,11 @@ if [ -z "$DATABASE_URL" ]; then
   log "WARN: DATABASE_URL is empty in container (check .env and docker-compose environment)"
 fi
 
+# Prisma CLI / prisma.config.ts liest .env via dotenv – im Container gibt es keine .env,
+# also schreiben wir DATABASE_URL hier rein, damit migrate deploy die URL findet.
+printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > /app/.env
+
 log "Running Prisma migrations..."
-# Migrations als root laufen lassen, damit die volle Container-Env (DATABASE_URL von docker-compose) ankommt
 if ! npx prisma migrate deploy 2>> "$LOG"; then
   log "ERROR: Prisma migrate deploy failed. See $LOG"
   exit 1
