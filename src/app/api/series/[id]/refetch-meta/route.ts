@@ -3,13 +3,17 @@ import { prisma } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
-import { getSeries } from "@/lib/tmdb";
+import {
+  getSeries,
+  getTvContentRatings,
+  mapTvRatingsToFskDE,
+} from "@/lib/tmdb";
 import { invalidateSeriesCache, invalidateSeriesListCache } from "@/lib/series-data";
 import { invalidateHomeCache } from "@/lib/home-data";
 
 /**
  * POST /api/series/[id]/refetch-meta
- * Lädt Titel, Originaltitel, Jahr, Overview, Tagline, Status von TMDb und aktualisiert die Serie.
+ * Lädt Titel, Originaltitel, Jahr, Overview, Tagline, Status und FSK (DE) von TMDb und aktualisiert die Serie.
  * Erfordert EDITOR.
  */
 export async function POST(
@@ -39,7 +43,10 @@ export async function POST(
   }
 
   try {
-    const d = await getSeries(s.tmdbId);
+    const [d, contentRatings] = await Promise.all([
+      getSeries(s.tmdbId),
+      getTvContentRatings(s.tmdbId),
+    ]);
     if (!d) {
       return NextResponse.json(
         { ok: false, error: "TMDb-Details nicht gefunden" },
@@ -56,6 +63,14 @@ export async function POST(
     const inProduction =
       typeof d.number_of_seasons === "number" ? d.number_of_seasons > 0 : null;
 
+    const fskRaw = contentRatings?.results
+      ? mapTvRatingsToFskDE(contentRatings.results)
+      : null;
+    const fsk =
+      typeof fskRaw === "number" && [0, 6, 12, 16, 18].includes(fskRaw)
+        ? fskRaw
+        : null;
+
     await prisma.series.update({
       where: { id: idNum },
       data: {
@@ -66,6 +81,7 @@ export async function POST(
         tagline: d.tagline ?? null,
         statusText,
         inProduction: inProduction ?? undefined,
+        fsk,
       },
     });
     await Promise.all([
@@ -82,6 +98,7 @@ export async function POST(
       overview: d.overview,
       tagline: d.tagline,
       statusText,
+      fsk,
     });
   } catch (e) {
     console.error("refetch-meta (series) failed:", e);
