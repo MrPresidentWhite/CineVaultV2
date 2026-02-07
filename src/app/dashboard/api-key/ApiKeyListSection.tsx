@@ -57,6 +57,9 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
     top: number;
     right: number;
   } | null>(null);
+
+  /** Ungefähre Höhe des Dropdown-Menüs (3 Einträge) für Platzberechnung. */
+  const MENU_APPROX_HEIGHT = 140;
   const [activeLoadingId, setActiveLoadingId] = useState<string | null>(null);
   const menuPortalRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -211,6 +214,32 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
     }
   };
 
+  const handleDownloadPublicKey = async (keyRow: ApiKeyRow) => {
+    setMenuOpenId(null);
+    setMenuPosition(null);
+    try {
+      const res = await fetch(`/api/dashboard/api-key/${keyRow.id}/public-key`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data?.error ?? "Public Key konnte nicht geladen werden.");
+        return;
+      }
+      const contentDisposition = res.headers.get("Content-Disposition");
+      const match = contentDisposition?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `cinevault-${keyRow.label ?? keyRow.id}.pub`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Fehler beim Herunterladen des Public Keys.");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     setMenuOpenId(null);
     setMenuPosition(null);
@@ -303,8 +332,13 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
                             setMenuPosition(null);
                           } else {
                             const rect = btn.getBoundingClientRect();
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const openAbove = spaceBelow < MENU_APPROX_HEIGHT;
+                            const top = openAbove
+                              ? rect.top - MENU_APPROX_HEIGHT - 4
+                              : rect.bottom + 4;
                             setMenuPosition({
-                              top: rect.bottom + 4,
+                              top: Math.max(8, top),
                               right: window.innerWidth - rect.right,
                             });
                             setMenuOpenId(key.id);
@@ -341,12 +375,20 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
             <div
               ref={menuPortalRef}
               role="menu"
-              className="fixed z-[3000] min-w-[140px] rounded-lg border border-ring bg-panel py-1 shadow-lg"
+              className="fixed z-[3000] min-w-[200px] rounded-lg border border-ring bg-panel py-1 shadow-lg"
               style={{
                 top: `${menuPosition.top}px`,
                 right: `${menuPosition.right}px`,
               }}
             >
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full px-3 py-2 text-left text-sm text-text hover:bg-bg"
+                onClick={() => handleDownloadPublicKey(keyRow)}
+              >
+                Public Key herunterladen
+              </button>
               <button
                 type="button"
                 role="menuitem"
