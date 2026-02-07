@@ -7,21 +7,20 @@ const API_BASE = "/api/v1";
 /**
  * GET /api/openapi
  * Liefert die OpenAPI-3.0-Spec für Swagger UI (JSON).
- * Server-URL, Beschreibung und Standard für Try-it-out je nach Umgebung
- * (Dev = localhost:3000, Prod = APP_URL). Erster Server = Default in Swagger.
+ * Server-URL nach NODE_ENV: development = localhost:3000, production = APP_URL.
+ * Erster Server = Default für Try-it-out (damit Try-it-out gegen die laufende Instanz geht).
  */
 export async function GET() {
-  const base = APP_URL.replace(/\/+$/, "");
-  const isLocal = base.includes("localhost") || base.includes("127.0.0.1");
-  const primaryUrl = isLocal
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const primaryUrl = isDevelopment
     ? "http://localhost:3000" + API_BASE
-    : base + API_BASE;
+    : (APP_URL.replace(/\/+$/, "") + API_BASE);
 
   // Erster Server = Default für Try-it-out und überall in der UI
   const servers = [
     {
       url: primaryUrl,
-      description: isLocal ? "Lokal (localhost)" : "Produktion",
+      description: isDevelopment ? "Lokal (localhost)" : "Produktion",
     },
     { url: API_BASE, description: "Relativ (gleiche Origin)" },
   ];

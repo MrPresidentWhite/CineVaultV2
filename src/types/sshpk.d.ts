@@ -10,6 +10,13 @@ declare module "sshpk" {
     toString(format?: string): string;
   }
 
+  export interface PrivateKey extends ParsedKey {
+    createSign(hashAlgo?: string): {
+      update(data: string | Buffer, encoding?: string): void;
+      sign(): { toString(format: string): string };
+    };
+  }
+
   export interface ParsedSignature {
     type: string;
   }
@@ -19,6 +26,12 @@ declare module "sshpk" {
     format?: string,
     options?: { passphrase?: string; filename?: string }
   ): ParsedKey;
+
+  export function parsePrivateKey(
+    data: string,
+    format?: string,
+    options?: { passphrase?: string; filename?: string }
+  ): PrivateKey;
 
   export function parseSignature(
     data: string | Buffer,

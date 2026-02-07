@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { verifyChallengeSignature } from "@/lib/api-v1-auth";
+import {
+  verifyChallengeSignature,
+  signChallengeWithPrivateKey,
+} from "@/lib/api-v1-auth";
 import { decryptVerificationKey } from "@/lib/api-key-crypto";
 import {
   setApiSession,
@@ -9,30 +12,101 @@ import {
   API_SESSION_TTL_SEC,
 } from "@/lib/api-session";
 
+const CONTENT_JSON = "application/json";
+const CONTENT_MULTIPART = "multipart/form-data";
+
 /**
  * POST /api/v1/auth/verify
- * Body: { challengeId: string, signature: string } – Signatur (Base64, SSH-Format) über den Nonce.
+ * Body (application/json): { challengeId: string, signature: string } – Signatur (Base64, SSH-Format) über den Nonce.
+ * Body (multipart/form-data): challengeId (string), privateKeyFile (Datei) – für Try-it-out; Key wird nur zur Signatur genutzt, nicht gespeichert.
  * Bei Erfolg: API-Session in Redis, Set-Cookie (cv.api_sid). Kein Bearer, kein Passwort.
  */
 export async function POST(request: Request) {
-  let body: { challengeId?: string; signature?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Ungültiges JSON" },
-      { status: 400 }
-    );
-  }
+  const contentType = request.headers.get("content-type") ?? "";
+  let challengeId: string;
+  let signature: string;
 
-  const challengeId =
-    typeof body.challengeId === "string" ? body.challengeId.trim() : "";
-  const signature =
-    typeof body.signature === "string" ? body.signature.trim() : "";
-
-  if (!challengeId || !signature) {
+  if (contentType.includes(CONTENT_MULTIPART)) {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "Ungültiges multipart/form-data" },
+        { status: 400 }
+      );
+    }
+    const cid = formData.get("challengeId");
+    const file = formData.get("privateKeyFile");
+    const passphraseRaw = formData.get("privateKeyPassphrase");
+    const passphrase =
+      typeof passphraseRaw === "string" ? passphraseRaw.trim() : undefined;
+    challengeId = typeof cid === "string" ? cid.trim() : "";
+    if (!challengeId || !file || !(file instanceof File)) {
+      return NextResponse.json(
+        { error: "challengeId und privateKeyFile (Datei) erforderlich" },
+        { status: 400 }
+      );
+    }
+    const keyContent = await file.text();
+    const challenge = await prisma.authChallenge.findUnique({
+      where: { id: challengeId },
+      select: { id: true, nonce: true, usedAt: true, expiresAt: true },
+    });
+    if (
+      !challenge ||
+      challenge.usedAt != null ||
+      new Date(challenge.expiresAt) < new Date()
+    ) {
+      return NextResponse.json(
+        { error: "Challenge ungültig oder abgelaufen" },
+        { status: 400 }
+      );
+    }
+    try {
+      signature = signChallengeWithPrivateKey(
+        keyContent,
+        challenge.nonce,
+        passphrase
+      );
+    } catch (e) {
+      const msg =
+        e && typeof e === "object" && "message" in e
+          ? String((e as { message: unknown }).message)
+          : "";
+      if (msg.includes("passphrase") || msg.includes("encrypted"))
+        return NextResponse.json(
+          { error: "Private Key ist verschlüsselt – Passphrase angeben (Feld privateKeyPassphrase)" },
+          { status: 400 }
+        );
+      return NextResponse.json(
+        { error: "Private Key ungültig oder nicht unterstützt (RSA/Ed25519)" },
+        { status: 400 }
+      );
+    }
+  } else if (contentType.includes(CONTENT_JSON)) {
+    let body: { challengeId?: string; signature?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Ungültiges JSON" },
+        { status: 400 }
+      );
+    }
+    challengeId =
+      typeof body.challengeId === "string" ? body.challengeId.trim() : "";
+    signature =
+      typeof body.signature === "string" ? body.signature.trim() : "";
+    if (!challengeId || !signature) {
+      return NextResponse.json(
+        { error: "challengeId und signature erforderlich" },
+        { status: 400 }
+      );
+    }
+  } else {
     return NextResponse.json(
-      { error: "challengeId und signature erforderlich" },
+      { error: "Content-Type: application/json oder multipart/form-data erforderlich" },
       { status: 400 }
     );
   }

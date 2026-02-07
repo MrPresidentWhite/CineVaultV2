@@ -122,7 +122,7 @@ export const openApiSpec = {
         tags: ["API Authentication (Challenge-Response)"],
         summary: "Signatur prüfen und Session eröffnen",
         description:
-          "Sendet die **Signatur** (nicht den Nonce!). Die Signatur entsteht, indem du den **nonce** aus der Challenge mit deinem **privaten SSH-Key** signierst; das Ergebnis (Base64, SSH-Format) ist das Feld **signature**. Den Nonce-Klartext als signature einzutragen führt zu 401 – der Server prüft die Signatur kryptographisch. Bei Erfolg setzt der Server das Cookie `cv.api_sid`.",
+          "**Zwei Varianten:**\n\n1. **application/json:** Signatur (nicht den Nonce!) senden. Die Signatur entsteht, indem du den **nonce** aus der Challenge mit deinem **privaten SSH-Key** signierst; das Ergebnis (Base64, SSH-Format) ist das Feld **signature**.\n\n2. **multipart/form-data (Try-it-out):** Statt Signatur manuell zu erzeugen: **challengeId** und **privateKeyFile** (deine private Key-Datei, PEM oder OpenSSH) hochladen. Der Server signiert den Nonce damit und prüft gegen den gespeicherten öffentlichen Schlüssel. Der Key wird **nur zur Signatur genutzt und nicht gespeichert**.\n\nBei Erfolg setzt der Server das Cookie `cv.api_sid`.",
         operationId: "verifyChallenge",
         requestBody: {
           required: true,
@@ -140,6 +140,29 @@ export const openApiSpec = {
                     type: "string",
                     description:
                       "Kryptographische Signatur über den nonce, erzeugt mit dem privaten SSH-Key (Base64, SSH-Format). Nicht den Nonce-Text hier eintragen – nur die echte Signatur wird akzeptiert.",
+                  },
+                },
+              },
+            },
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["challengeId", "privateKeyFile"],
+                properties: {
+                  challengeId: {
+                    type: "string",
+                    description: "ID der zuvor angeforderten Challenge (aus POST /auth/challenge)",
+                  },
+                  privateKeyFile: {
+                    type: "string",
+                    format: "binary",
+                    description:
+                      "Private Key-Datei (PEM oder OpenSSH, RSA oder Ed25519). Wird nur zur Signatur genutzt, nicht gespeichert. Für Try-it-out: zuerst POST /auth/challenge ausführen, dann hier challengeId + Key-Datei senden.",
+                  },
+                  privateKeyPassphrase: {
+                    type: "string",
+                    description:
+                      "Optional: Passphrase, falls der Private Key verschlüsselt ist (z. B. bei ssh-keygen mit -p). Wird nicht gespeichert.",
                   },
                 },
               },
