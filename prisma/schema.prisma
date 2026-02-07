@@ -230,6 +230,8 @@ model Movie {
   overview    String? @db.VarChar(4000)
 
   status           Status    @default(ON_WATCHLIST)
+  /// Bei Status VO_SOON: ab diesem Datum wird Status automatisch auf VB_WISHLIST gesetzt (Cron).
+  statusScheduledAt DateTime?
   priority         Priority  @default(STANDARD)
   assignedToUserId Int?
   assignedToUser   User?    @relation("AssignedMovies", fields: [assignedToUserId], references: [id])
@@ -261,6 +263,7 @@ model Movie {
   @@index([collectionId])
   @@index([addedAt])
   @@index([status])
+  @@index([status, statusScheduledAt])
   @@index([priority])
   @@index([mediaType])
   @@index([fsk])
@@ -447,6 +450,8 @@ model MovieStatusChange {
   from      Status
   to        Status
   changedAt DateTime @default(now())
+  /// Bei from=VO_SOON: das geplante Datum (statusScheduledAt) vor dem Wechsel – für E-Mail „VÖ: Demnächst (Datum)“.
+  fromScheduledAt DateTime?
 
   delivered   Boolean   @default(false)
   deliveredAt DateTime?

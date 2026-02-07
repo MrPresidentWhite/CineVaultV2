@@ -46,6 +46,7 @@ export type MovieDetailUi = {
   savingsPct: string | null;
   vbSentAt: string | null;
   vbReceivedAt: string | null;
+  statusScheduledAt: string | null;
   addedAt: string | null;
   statusLabel: string;
   priorityLabel: string;
@@ -77,6 +78,7 @@ export type MovieDetail = {
   videobusterUrl: string | null;
   vbSentAt: Date | null;
   vbReceivedAt: Date | null;
+  statusScheduledAt: Date | null;
   addedAt: Date;
   sizeBeforeBytes: bigint | null;
   sizeAfterBytes: bigint | null;
@@ -130,6 +132,7 @@ export async function getMovieById(id: number): Promise<MovieDetail | null> {
       savingsPct: savingsPercent(movie.sizeBeforeBytes, movie.sizeAfterBytes),
       vbSentAt: fmtDate(movie.vbSentAt),
       vbReceivedAt: fmtDate(movie.vbReceivedAt),
+      statusScheduledAt: fmtDate(movie.statusScheduledAt),
       addedAt: fmtDate(movie.addedAt),
       statusLabel: statusLabel(movie.status),
       priorityLabel: priorityLabel(movie.priority),
@@ -161,6 +164,7 @@ export async function getMovieById(id: number): Promise<MovieDetail | null> {
       videobusterUrl: movie.videobusterUrl ?? null,
       vbSentAt: movie.vbSentAt,
       vbReceivedAt: movie.vbReceivedAt,
+      statusScheduledAt: movie.statusScheduledAt ?? null,
       addedAt: movie.addedAt,
       sizeBeforeBytes: movie.sizeBeforeBytes,
       sizeAfterBytes: movie.sizeAfterBytes,

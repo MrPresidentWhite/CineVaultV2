@@ -97,7 +97,11 @@ export function MovieInfo({ movie, canEdit }: Props) {
           )}
           <li>
             <span>Status</span>
-            <strong>{movie.ui.statusLabel}</strong>
+            <strong>
+              {movie.status === "VO_SOON" && movie.ui.statusScheduledAt
+                ? `VÖ: Demnächst (${formatDateLL(movie.ui.statusScheduledAt)})`
+                : movie.ui.statusLabel}
+            </strong>
           </li>
           <li>
             <span>Priorität</span>

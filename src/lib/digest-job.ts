@@ -68,6 +68,7 @@ export async function sendStatusDigestJob(): Promise<void> {
       from: true,
       to: true,
       changedAt: true,
+      fromScheduledAt: true,
       movie: {
         select: {
           id: true,
@@ -144,6 +145,7 @@ export async function sendStatusDigestJob(): Promise<void> {
         firstTime: format(first.changedAt, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
         lastTime: format(last.changedAt, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
         finalStatus: last.to,
+        fromScheduledAt: first.fromScheduledAt,
       };
     });
 

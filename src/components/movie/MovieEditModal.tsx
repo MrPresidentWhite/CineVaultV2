@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import type { MovieDetail } from "@/lib/movie-data";
 import { statusLabels, USER_SELECTABLE_STATUSES } from "@/lib/enum-mapper";
 import { priorityLabels } from "@/lib/enum-mapper";
@@ -20,6 +20,7 @@ export function MovieEditModal({ movie, users }: Props) {
   const modalRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [status, setStatus] = useState<Status>(movie.status as Status);
 
   const closeModal = () => {
     if (!modalRef.current) return;
@@ -64,6 +65,7 @@ export function MovieEditModal({ movie, users }: Props) {
 
     const vbSentAt = (form.querySelector('input[name="vbSentAt"]') as HTMLInputElement)?.value?.trim() ?? "";
     const vbReceivedAt = (form.querySelector('input[name="vbReceivedAt"]') as HTMLInputElement)?.value?.trim() ?? "";
+    const statusScheduledAt = (form.querySelector('input[name="statusScheduledAt"]') as HTMLInputElement)?.value?.trim() ?? "";
 
     const isValidDateValue = (val: string): boolean =>
       val === "" || !Number.isNaN(new Date(val).getTime());
@@ -76,10 +78,14 @@ export function MovieEditModal({ movie, users }: Props) {
       alert("Bitte ein gültiges Datum für „Eingang“ eingeben (z. B. JJJJ-MM-TT).");
       return;
     }
+    if (status === "VO_SOON" && statusScheduledAt && !isValidDateValue(statusScheduledAt)) {
+      alert("Bitte ein gültiges Datum für „Ab Datum → Auf Wunschliste“ eingeben.");
+      return;
+    }
 
     const fd = new FormData(form);
     const payload: Record<string, unknown> = Object.fromEntries(fd.entries());
-    ["vbSentAt", "vbReceivedAt"].forEach((k) => {
+    ["vbSentAt", "vbReceivedAt", "statusScheduledAt"].forEach((k) => {
       if (!payload[k]) payload[k] = "";
     });
     try {
@@ -150,9 +156,11 @@ export function MovieEditModal({ movie, users }: Props) {
                 <select
                   name="status"
                   className="input w-full"
-                  defaultValue={movie.status}
+                  value={status}
                   onChange={(e) => {
-                    if (e.target.value === "SHIPPING") {
+                    const v = e.target.value as Status;
+                    setStatus(v);
+                    if (v === "SHIPPING") {
                       const today = new Date().toISOString().slice(0, 10);
                       const sent = formRef.current?.querySelector('input[name="vbSentAt"]') as HTMLInputElement;
                       if (sent) sent.value = today;
@@ -166,6 +174,20 @@ export function MovieEditModal({ movie, users }: Props) {
                   ))}
                 </select>
               </label>
+              {status === "VO_SOON" && (
+                <label className="block">
+                  <span className="block text-sm text-text/70 mb-1">Ab diesem Datum → Auf Wunschliste</span>
+                  <input
+                    type="date"
+                    name="statusScheduledAt"
+                    defaultValue={movie.ui.statusScheduledAt ?? ""}
+                    className="input w-full"
+                  />
+                  <small className="block text-text/60 mt-1">
+                    Wird das Datum erreicht, setzt ein Cron-Job den Status automatisch auf „Auf Wunschliste“ (optional: Benachrichtigung).
+                  </small>
+                </label>
+              )}
               <label className="block">
                 <span className="block text-sm text-text/70 mb-1">Priorität</span>
                 <select name="priority" className="input w-full" defaultValue={movie.priority}>

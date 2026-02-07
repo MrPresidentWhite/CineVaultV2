@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
-import { Role as RoleEnum } from "@/generated/prisma/enums";
+import { Role as RoleEnum, Status as StatusEnum } from "@/generated/prisma/enums";
 import { invalidateMovieCache, invalidateMoviesListCache } from "@/lib/movie-data";
 import { invalidateHomeCache } from "@/lib/home-data";
 
 /**
  * POST /api/movies/[id]/update
- * Body: quality, mediaType, status, priority, sizeBeforeBytes, sizeAfterBytes,
+ * Body: quality, mediaType, status, statusScheduledAt (nur bei status VO_SOON), priority, sizeBeforeBytes, sizeAfterBytes,
  * vbSentAt, vbReceivedAt, videobusterUrl, checkSum, assignedToUserId
  * Erfordert EDITOR.
  */
@@ -77,6 +77,17 @@ export async function POST(
       return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
     }
     data.vbReceivedAt = result.date;
+  }
+
+  // statusScheduledAt: nur bei Status VO_SOON; sonst immer null
+  if (body.status && typeof body.status === "string" && body.status !== StatusEnum.VO_SOON) {
+    data.statusScheduledAt = null;
+  } else if (body.statusScheduledAt !== undefined) {
+    const result = parseOptionalDate(body.statusScheduledAt, "VÖ-Datum (statusScheduledAt)");
+    if (result.error) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    }
+    data.statusScheduledAt = result.date;
   }
 
   try {

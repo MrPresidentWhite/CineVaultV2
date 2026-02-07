@@ -3,6 +3,8 @@
  * Kein EJS – reine TS-Funktionen für bessere Typen und Wartung.
  */
 
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { statusLabels } from "./enum-mapper";
 import type { Status } from "@/generated/prisma/enums";
 import { Status as StatusEnum } from "@/generated/prisma/enums";
@@ -61,12 +63,24 @@ export type DigestSummary = {
   firstTime: string;
   lastTime: string;
   finalStatus: Status | string;
+  /** Bei from=VO_SOON: geplantes Datum für E-Mail „VÖ: Demnächst (Datum)“ */
+  fromScheduledAt?: Date | null;
 };
 
 export type DigestUser = {
   name: string | null;
   email: string;
 };
+
+function fromLabelForEmail(s: DigestSummary): string {
+  if (s.from === StatusEnum.VO_SOON && s.fromScheduledAt) {
+    const dateStr = format(new Date(s.fromScheduledAt), "d. MMMM yyyy", {
+      locale: de,
+    });
+    return `VÖ: Demnächst (${dateStr})`;
+  }
+  return statusLabel(s.from);
+}
 
 function renderMovieCard(
   s: DigestSummary,
@@ -80,13 +94,14 @@ function renderMovieCard(
     ? `<div class="movie-poster"><img src="${esc(posterSrc)}" alt="${esc(s.movie.title)}" width="140" style="width:100%;height:210px;object-fit:cover;display:block;border-radius:8px;"></div>`
     : "";
   const gridCols = hasPoster ? "min(140px,30vw) 1fr" : "1fr";
+  const fromLabel = fromLabelForEmail(s);
   return `
     <div class="movie-card" style="background:${styles.panel};border:1px solid ${styles.ring};border-radius:12px;overflow:hidden;margin-bottom:20px;display:grid;grid-template-columns:${gridCols};gap:16px;align-items:start;">
       ${posterHtml}
       <div class="movie-body" style="padding:16px;min-width:0;">
         <div class="movie-title" style="font-size:18px;font-weight:600;color:${styles.gold};margin-bottom:8px;">${esc(s.movie.title)} <span style="font-size:14px;color:#aaa;">(${s.movie.releaseYear})</span></div>
         <div class="change-line" style="font-size:14px;margin:10px 0;padding:10px;background:${styles.goldBg};border-radius:8px;color:${styles.text};">
-          ${esc(s.firstTime)} <strong style="color:${styles.gold}">„${esc(statusLabel(s.from))}"</strong> → ${esc(s.lastTime)} <strong style="color:${styles.gold}">„${esc(statusLabel(s.to))}"</strong>
+          ${esc(s.firstTime)} <strong style="color:${styles.gold}">„${esc(fromLabel)}"</strong> → ${esc(s.lastTime)} <strong style="color:${styles.gold}">„${esc(statusLabel(s.to))}"</strong>
         </div>
         <a href="${esc(appUrl)}/movies/${String(s.movie.id)}" class="btn" style="display:inline-block;padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;margin-top:12px;background:${accent};color:#000;text-decoration:none;">Zur Detailseite</a>
       </div>

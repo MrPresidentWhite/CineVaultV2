@@ -4,6 +4,7 @@
  * Registriert node-cron-Jobs nur in Production:
  * - Session-Cleanup täglich 3:00 Uhr
  * - Status-Digest (E-Mail + Discord) täglich 10:00 und 21:00 Uhr
+ * - Status-Scheduled (VÖ: Demnächst → Auf Wunschliste) täglich 6:00 Uhr
  * - CDN-Warmup alle N Minuten (wenn WARMUP_ENABLED=1)
  */
 
@@ -48,6 +49,26 @@ export async function register() {
 
   cron.default.schedule("0 10 * * *", runDigest, opts);
   cron.default.schedule("0 21 * * *", runDigest, opts);
+
+  cron.default.schedule(
+    "0 6 * * *",
+    async () => {
+      try {
+        const { runStatusScheduledJob } = await import(
+          "@/lib/status-scheduled-job"
+        );
+        const result = await runStatusScheduledJob();
+        if (result.updated > 0) {
+          console.log(
+            `[cron] Status-Scheduled: ${result.updated} Filme auf Auf Wunschliste gesetzt`
+          );
+        }
+      } catch (e) {
+        console.error("[cron] Status-Scheduled fehlgeschlagen:", e);
+      }
+    },
+    opts
+  );
 
   const warmupEnabled = process.env.WARMUP_ENABLED === "1";
   const warmupMinutes = Math.max(
