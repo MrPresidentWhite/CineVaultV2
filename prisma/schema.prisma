@@ -19,6 +19,7 @@ enum Status {
   PROCESSING
   UPLOADED
   ARCHIVED
+  RECENTLY_ADDED // System-Status: nur beim Import gesetzt, nicht manuell wählbar
 }
 
 enum Priority {

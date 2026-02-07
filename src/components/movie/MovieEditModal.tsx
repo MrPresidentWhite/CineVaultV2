@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useEffect } from "react";
 import type { MovieDetail } from "@/lib/movie-data";
-import { statusLabels } from "@/lib/enum-mapper";
+import { statusLabels, USER_SELECTABLE_STATUSES } from "@/lib/enum-mapper";
 import { priorityLabels } from "@/lib/enum-mapper";
 import { mediaTypeLabels } from "@/lib/enum-mapper";
 import type { Status, Priority, MediaType } from "@/generated/prisma/enums";
@@ -159,13 +159,11 @@ export function MovieEditModal({ movie, users }: Props) {
                     }
                   }}
                 >
-                  {(Object.entries(statusLabels) as [Status, string][]).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    )
-                  )}
+                  {USER_SELECTABLE_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {statusLabels[value]}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="block">

@@ -1,12 +1,14 @@
 /**
  * Next.js Instrumentation – läuft einmal beim Start des Node-Servers.
- * Registriert node-cron-Jobs nur in Production, Zeitzone Europe/Berlin:
+ * Setzt Prozess-Zeitzone auf Europe/Berlin (unabhängig von Server-TZ).
+ * Registriert node-cron-Jobs nur in Production:
  * - Session-Cleanup täglich 3:00 Uhr
  * - Status-Digest (E-Mail + Discord) täglich 10:00 und 21:00 Uhr
  * - CDN-Warmup alle N Minuten (wenn WARMUP_ENABLED=1)
  */
 
-const CRON_TZ = "Europe/Berlin";
+const APP_TZ = "Europe/Berlin";
+process.env.TZ = APP_TZ;
 
 function isProduction(): boolean {
   if (process.env.NODE_ENV !== "production") return false;
@@ -19,7 +21,7 @@ export async function register() {
   if (!isProduction()) return;
 
   const cron = await import("node-cron");
-  const opts = { timezone: CRON_TZ };
+  const opts = { timezone: APP_TZ };
 
   cron.default.schedule(
     "0 3 * * *",

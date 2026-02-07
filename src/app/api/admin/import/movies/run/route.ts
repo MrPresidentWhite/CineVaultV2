@@ -136,8 +136,7 @@ export async function POST(request: Request) {
 
     const enumGenres = mapTmdbGenresToEnum(d.genres || []);
 
-    const status =
-      (single.status as keyof typeof StatusEnum) || StatusEnum.VB_WISHLIST;
+    // Neue Filme beim Import immer RECENTLY_ADDED (systemisch), danach Status-Change für Notifications
     const priority =
       (single.priority as keyof typeof PriorityEnum) || PriorityEnum.STANDARD;
     const mediaType =
@@ -168,7 +167,7 @@ export async function POST(request: Request) {
         backdropUrl: backdropKey,
         overview: d.overview ?? null,
         tagline: d.tagline ?? null,
-        status,
+        status: StatusEnum.RECENTLY_ADDED,
         priority,
         mediaType,
         quality: single.quality || null,
@@ -192,6 +191,15 @@ export async function POST(request: Request) {
           : {}),
       },
       select: { id: true, title: true },
+    });
+
+    await prisma.movieStatusChange.create({
+      data: {
+        movieId: created.id,
+        from: StatusEnum.ON_WATCHLIST,
+        to: StatusEnum.RECENTLY_ADDED,
+        changedBy: auth?.user?.id ?? null,
+      },
     });
 
     onProgress?.(100, "Fertig.");

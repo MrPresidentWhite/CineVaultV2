@@ -9,6 +9,7 @@ import { Status as StatusEnum } from "@/generated/prisma/enums";
 
 // Reihenfolge der Kategorien in der Mail (wichtigste / „finalste“ zuerst)
 const STATUS_DISPLAY_ORDER: Status[] = [
+  StatusEnum.RECENTLY_ADDED,
   StatusEnum.UPLOADED,
   StatusEnum.ARCHIVED,
   StatusEnum.SHIPPING,

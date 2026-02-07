@@ -22,7 +22,13 @@ export const statusLabels: Record<Status, string> = {
   PROCESSING: "In Verarbeitung",
   UPLOADED: "Hochgeladen",
   ARCHIVED: "Archiviert",
+  RECENTLY_ADDED: "Kürzlich hinzugefügt",
 };
+
+/** Status-Werte, die Nutzer:innen bei Bearbeitung auswählen können (ohne RECENTLY_ADDED). */
+export const USER_SELECTABLE_STATUSES: Status[] = (
+  Object.keys(statusLabels) as Status[]
+).filter((s) => s !== "RECENTLY_ADDED");
 
 export const priorityLabels: Record<Priority, string> = {
   HIGH: "Hoch",

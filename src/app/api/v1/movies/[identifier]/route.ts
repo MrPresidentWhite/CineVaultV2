@@ -5,6 +5,8 @@ import { toPublicUrl } from "@/lib/storage";
 import { Status as StatusEnum } from "@/generated/prisma/enums";
 
 const VALID_STATUSES = Object.values(StatusEnum) as string[];
+/** RECENTLY_ADDED ist nur systemisch (Import), nicht per API setzbar. */
+const USER_SETTABLE_STATUSES = VALID_STATUSES.filter((s) => s !== "RECENTLY_ADDED");
 
 /**
  * GET /api/v1/movies/[identifier]
@@ -156,10 +158,13 @@ export async function PATCH(
       { status: 400 }
     );
   }
-  if (!VALID_STATUSES.includes(status)) {
+  if (!USER_SETTABLE_STATUSES.includes(status)) {
     return NextResponse.json(
       {
-        error: `Ungültiger status. Erlaubt: ${VALID_STATUSES.join(", ")}`,
+        error:
+          status === "RECENTLY_ADDED"
+            ? "Status RECENTLY_ADDED ist nur systemisch (beim Import), nicht setzbar."
+            : `Ungültiger status. Erlaubt: ${USER_SETTABLE_STATUSES.join(", ")}`,
       },
       { status: 400 }
     );

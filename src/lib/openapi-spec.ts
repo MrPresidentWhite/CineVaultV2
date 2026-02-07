@@ -333,8 +333,10 @@ export const openApiSpec = {
               "PROCESSING",
               "UPLOADED",
               "ARCHIVED",
+              "RECENTLY_ADDED",
             ],
-            description: "Neuer Status des Films",
+            description:
+              "Neuer Status. RECENTLY_ADDED ist nur systemisch (beim Import), nicht per API setzbar.",
           },
         },
       },

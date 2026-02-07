@@ -9,12 +9,12 @@ import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { renderMovieNotificationHtml } from "@/lib/email-templates";
 import { APP_URL, R2_PUBLIC_BASE_URL, DISCORD_WEBHOOK_URL } from "@/lib/env";
 import type { Status } from "@/generated/prisma/enums";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 
 const DIGEST_WINDOW_HOURS = 12;
 
-const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED"];
+const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED", "RECENTLY_ADDED"];
 const DISCORD_TITLES: Partial<
   Record<Status, { single: string; plural: string }>
 > = {
@@ -26,6 +26,10 @@ const DISCORD_TITLES: Partial<
     single: "Folgender Film ist ab sofort archiviert",
     plural: "Folgende Filme sind ab sofort archiviert",
   },
+  RECENTLY_ADDED: {
+    single: "Kürzlich hinzugefügt",
+    plural: "Kürzlich hinzugefügt",
+  },
 };
 
 function publicUrl(key: string): string {
@@ -36,16 +40,15 @@ function publicUrl(key: string): string {
   return base ? `${base}/${path}` : path || "";
 }
 
-async function sendDiscordNotification(title: string, movies: string[]): Promise<void> {
-  if (!DISCORD_WEBHOOK_URL || movies.length === 0) return;
-  const content = `${title}\n\n${movies.map((m) => `> **${m}**`).join("\n")}`;
+async function sendDiscordNotification(content: string, logLabel?: string): Promise<void> {
+  if (!DISCORD_WEBHOOK_URL || !content.trim()) return;
   try {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
-    console.log(`[digest] Discord: ${title} – ${movies.length} Filme`);
+    console.log(`[digest] Discord: ${logLabel ?? content.slice(0, 50)}…`);
   } catch (err) {
     console.error("[digest] Discord-Webhook fehlgeschlagen:", err);
   }
@@ -89,13 +92,14 @@ export async function sendStatusDigestJob(): Promise<void> {
       id: true,
       movieId: true,
       to: true,
+      changedAt: true,
       movie: {
         select: { title: true, releaseYear: true },
       },
     },
   });
 
-  // Discord: UPLOADED/ARCHIVED aus allen offenen Changes (pro Status eine Nachricht)
+  // Discord: UPLOADED/ARCHIVED/RECENTLY_ADDED aus allen offenen Changes (pro Status eine Nachricht)
   const statusToMovies = new Map<Status, string[]>();
   DISCORD_RELEVANT_STATUSES.forEach((s) => statusToMovies.set(s, []));
   const seenMovies = new Set<number>();
@@ -104,7 +108,11 @@ export async function sendStatusDigestJob(): Promise<void> {
     seenMovies.add(change.movieId);
     const list = statusToMovies.get(change.to as Status);
     if (list) {
-      list.push(`${change.movie.title} (${change.movie.releaseYear})`);
+      const line =
+        change.to === "RECENTLY_ADDED"
+          ? `- ${change.movie.title} (${change.movie.releaseYear}) ${formatDistanceToNow(change.changedAt, { addSuffix: true, locale: de })}`
+          : `${change.movie.title} (${change.movie.releaseYear})`;
+      list.push(line);
     }
   }
   for (const [status, movies] of statusToMovies) {
@@ -112,7 +120,11 @@ export async function sendStatusDigestJob(): Promise<void> {
     const config = DISCORD_TITLES[status];
     if (!config) continue;
     const title = movies.length === 1 ? config.single : config.plural;
-    await sendDiscordNotification(title, movies);
+    const content =
+      status === "RECENTLY_ADDED"
+        ? `${title}\n\n${movies.join("\n")}`
+        : `${title}\n\n${movies.map((m) => `> **${m}**`).join("\n")}`;
+    await sendDiscordNotification(content, `${title} – ${movies.length} Filme`);
   }
 
   // E-Mails: nur wenn es recent Changes gibt und SMTP konfiguriert ist
