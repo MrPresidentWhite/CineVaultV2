@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { QuickActions } from "@/components/QuickActions";
+import { AppShell } from "@/components/AppShell";
 import { getAuth, hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
 import { toPublicUrl } from "@/lib/storage";
@@ -58,14 +57,9 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} font-sans min-h-dvh bg-bg text-text antialiased`}
       >
-        <div className="min-h-dvh">
-          <Header user={userPayload} />
-          {/* Quick-Links nur Desktop, nicht auf Login */}
-          <div className="hidden md:block">
-            <QuickActions items={quickActionsItems} />
-          </div>
-          <main className="main px-4 py-4 md:px-7 md:py-7">{children}</main>
-        </div>
+        <AppShell user={userPayload} quickActionsItems={quickActionsItems}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

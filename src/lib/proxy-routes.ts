@@ -11,8 +11,10 @@ const ROLE_ORDER: RoleLevel[] = ["VIEWER", "EDITOR", "ADMIN"];
 const ROUTE_RULES: { prefix: string; minRole: RoleLevel }[] = [
   { prefix: "/dashboard/admin", minRole: "ADMIN" },
   { prefix: "/dashboard/import", minRole: "EDITOR" },
+  { prefix: "/dashboard/api-key", minRole: "EDITOR" },
   { prefix: "/api/admin/users", minRole: "ADMIN" },
   { prefix: "/api/admin/import", minRole: "EDITOR" },
+  { prefix: "/api/dashboard", minRole: "EDITOR" },
 ];
 
 export function getRequiredRole(pathname: string): RoleLevel | null {

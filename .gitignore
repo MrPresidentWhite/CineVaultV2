@@ -20,6 +20,10 @@
 # production
 /build
 
+# scripts (API-Test mit privatem Key)
+scripts/api_test_auth.py
+scripts/requirements-api-test.txt
+
 # misc
 .DS_Store
 *.pem

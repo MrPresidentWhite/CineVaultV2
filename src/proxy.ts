@@ -26,7 +26,7 @@ const BACK_URL_COOKIE = "backUrl";
 const FORBIDDEN_REDIRECT = "/dashboard";
 
 /** Pfade, die ohne Session erreichbar sind. "/" ist bewusst nicht dabei – in Prod ohne Login → /login. */
-const PUBLIC_PATHS = ["/login", "/api/auth"] as const;
+const PUBLIC_PATHS = ["/login", "/api/auth", "/api/v1"] as const;
 
 /** Präfixe, die immer erlaubt sind (_next, static). */
 const ALLOWED_PREFIXES = ["/_next", "/favicon", "/assets"];
@@ -138,6 +138,8 @@ export async function proxy(request: NextRequest) {
   applyBackNav(request, res);
   return res;
 }
+
+export default proxy;
 
 export const config = {
   matcher: [

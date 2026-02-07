@@ -335,29 +335,42 @@ model User {
 
 model ApiKey {
   id                   String    @id @default(cuid())
-  sshPublicKey         String    @db.Text
+  /// Argon2-Hash des Schlüsselinhalts (Besitznachweis, kein Klartext).
+  keyContentHash       String    @db.Text
+  /// Verschlüsselter öffentlicher Schlüssel (AES-256-GCM) für Challenge-Response-Signaturprüfung; kein Klartext in der DB.
+  verificationKeyEncrypted String?   @db.Text
   userId               Int
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   label                String?   @db.VarChar(191)
   fingerprint          String?   @db.VarChar(255)
   createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
   lastUsed             DateTime?
   expiresAt            DateTime?
   lastSuccessfulAuth   DateTime?
   failedAttempts       Int       @default(0)
+  /// Bei mehreren Keys pro User: genau einer als „aktiver“ Key (z. B. für API-Auth).
+  isActiveKey          Boolean   @default(false)
 
   authChallenges AuthChallenge[]
+
+  @@index([userId])
+  @@index([userId, isActiveKey])
+  @@index([fingerprint])
 }
 
 model AuthChallenge {
-  id        String   @id @default(cuid())
-  nonce     String   @unique @db.VarChar(255)
+  id        String    @id @default(cuid())
+  nonce     String    @unique @db.VarChar(255)
   apiKeyId  String
-  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  apiKey    ApiKey    @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  /// Einmalverwendung: gesetzt wenn Challenge für Verify genutzt wurde (verhindert Replay).
+  usedAt    DateTime?
 
   @@index([expiresAt])
+  @@index([apiKeyId])
 }
 
 model Session {
