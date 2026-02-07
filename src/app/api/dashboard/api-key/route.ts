@@ -54,6 +54,9 @@ export async function GET() {
       createdAt: true,
       expiresAt: true,
       isActiveKey: true,
+      lastSuccessfulAuth: true,
+      lastFailedAuth: true,
+      failedAttempts: true,
     },
     orderBy: { createdAt: "asc" },
   });

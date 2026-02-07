@@ -385,6 +385,7 @@ model ApiKey {
   lastUsed             DateTime?
   expiresAt            DateTime?
   lastSuccessfulAuth   DateTime?
+  lastFailedAuth       DateTime?
   failedAttempts       Int       @default(0)
   /// Bei mehreren Keys pro User: genau einer als „aktiver“ Key (z. B. für API-Auth).
   isActiveKey          Boolean   @default(false)

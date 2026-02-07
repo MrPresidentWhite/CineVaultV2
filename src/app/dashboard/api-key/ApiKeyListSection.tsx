@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { formatDistanceToNow, format } from "date-fns";
+import { de } from "date-fns/locale";
 
 export type ApiKeyRow = {
   id: string;
@@ -10,6 +12,9 @@ export type ApiKeyRow = {
   createdAt: string;
   expiresAt: string | null;
   isActiveKey: boolean;
+  lastSuccessfulAuth: string | null;
+  lastFailedAuth: string | null;
+  failedAttempts: number;
 };
 
 type Props = {
@@ -41,6 +46,34 @@ function validateExpiresAt(value: string): string | null {
   const d = new Date(value.trim() + "T12:00:00Z");
   if (Number.isNaN(d.getTime())) return "Ungültiges Datum";
   return null;
+}
+
+/** Zuletzt genutzt: „vor X“ unter 14 Tagen, sonst Datum. */
+function formatLastUsed(iso: string | null): string {
+  if (!iso) return "noch nie";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = diffMs / (24 * 60 * 60 * 1000);
+  if (diffDays < 14) {
+    return formatDistanceToNow(d, { addSuffix: true, locale: de });
+  }
+  return format(d, "dd.MM.yyyy", { locale: de });
+}
+
+/** Letzter Fehlversuch: „vor X“ unter 14 Tagen, sonst Datum; null → „—“ */
+function formatLastFailed(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = diffMs / (24 * 60 * 60 * 1000);
+  if (diffDays < 14) {
+    return formatDistanceToNow(d, { addSuffix: true, locale: de });
+  }
+  return format(d, "dd.MM.yyyy", { locale: de });
 }
 
 export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
@@ -286,6 +319,8 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
                   <th className="py-2 pr-3 font-medium">Name</th>
                   <th className="py-2 pr-3 font-medium">Fingerprint</th>
                   <th className="py-2 pr-3 font-medium">Erstellt</th>
+                  <th className="py-2 pr-3 font-medium">Zuletzt genutzt</th>
+                  <th className="py-2 pr-3 font-medium">Fehlversuche</th>
                   <th className="py-2 pr-3 font-medium">Ablauf</th>
                   <th className="w-10 py-2 font-medium" aria-label="Aktionen" />
                 </tr>
@@ -317,6 +352,30 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
                     </td>
                     <td className="py-2 pr-3 text-text/80">
                       {formatDate(key.createdAt)}
+                    </td>
+                    <td className="py-2 pr-3 text-text/80">
+                      {formatLastUsed(key.lastSuccessfulAuth ?? null)}
+                    </td>
+                    <td
+                      className={
+                        (key.failedAttempts ?? 0) > 0
+                          ? "py-2 pr-3 font-medium text-amber-600 dark:text-amber-400"
+                          : "py-2 pr-3 text-text/80"
+                      }
+                      title={
+                        (key.failedAttempts ?? 0) > 0 && key.lastFailedAuth
+                          ? `Letzter Fehlversuch: ${formatLastFailed(key.lastFailedAuth)}`
+                          : undefined
+                      }
+                    >
+                      {(key.failedAttempts ?? 0) > 0 ? (
+                        <>
+                          {key.failedAttempts}×, zuletzt{" "}
+                          {formatLastFailed(key.lastFailedAuth ?? null)}
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-text/80">
                       {formatDate(key.expiresAt)}

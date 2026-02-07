@@ -90,7 +90,10 @@ export async function POST(request: Request) {
   if (!valid) {
     await prisma.apiKey.update({
       where: { id: challenge.apiKeyId },
-      data: { failedAttempts: { increment: 1 } },
+      data: {
+        failedAttempts: { increment: 1 },
+        lastFailedAuth: new Date(),
+      },
     });
     return NextResponse.json(
       { error: "Signatur ungültig" },
@@ -108,6 +111,7 @@ export async function POST(request: Request) {
       data: {
         lastUsed: new Date(),
         lastSuccessfulAuth: new Date(),
+        lastFailedAuth: null,
         failedAttempts: 0,
       },
     }),
