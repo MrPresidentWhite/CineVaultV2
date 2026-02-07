@@ -70,6 +70,11 @@ export default async function DashboardLayout({
             label: "Benutzerverwaltung",
             icon: "👥",
           },
+          {
+            href: "/dashboard/admin/bulk-refetch",
+            label: "Bulk Refetch (Meta & Bilder)",
+            icon: "🔄",
+          },
         ]
       : []),
   ];

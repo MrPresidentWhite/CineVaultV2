@@ -153,6 +153,25 @@ export async function getMovieReleaseInfo(id: number) {
   }>(`/movie/${id}/release_dates`, {}, DEFAULT_LANG, 24 * 3600);
 }
 
+/** FSK (DE) aus getMovie-Response mit append_to_response=release_dates (spart 1 Request pro Film im Bulk). */
+export function getFskFromMovieReleaseDates(releaseDates: unknown): number | null {
+  if (!releaseDates || typeof releaseDates !== "object") return null;
+  const rd = releaseDates as {
+    results?: Array<{
+      iso_3166_1?: string;
+      release_dates?: Array<{ certification?: string }>;
+    }>;
+  };
+  const de = rd.results?.find((r) => r.iso_3166_1 === "DE");
+  if (!de?.release_dates?.length) return null;
+  const preferred =
+    de.release_dates.find((x) => x.certification?.trim()) ?? de.release_dates[0];
+  const cert = preferred?.certification;
+  if (!cert) return null;
+  const n = parseInt(cert, 10);
+  return [0, 6, 12, 16, 18].includes(n) ? n : null;
+}
+
 export async function getCollection(id: number) {
   return request<{
     id: number;
