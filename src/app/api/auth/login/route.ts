@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       id: true,
       password: true,
       role: true,
+      locked: true,
       totpEnabledAt: true,
       isMasterAdmin: true,
     },
