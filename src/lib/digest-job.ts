@@ -9,12 +9,12 @@ import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { renderMovieNotificationHtml } from "@/lib/email-templates";
 import { APP_URL, R2_PUBLIC_BASE_URL, DISCORD_WEBHOOK_URL } from "@/lib/env";
 import type { Status } from "@/generated/prisma/enums";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 const DIGEST_WINDOW_HOURS = 12;
 
-const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED", "RECENTLY_ADDED"];
+const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED"];
 const DISCORD_TITLES: Partial<
   Record<Status, { single: string; plural: string }>
 > = {
@@ -25,10 +25,6 @@ const DISCORD_TITLES: Partial<
   ARCHIVED: {
     single: "Folgender Film ist ab sofort archiviert",
     plural: "Folgende Filme sind ab sofort archiviert",
-  },
-  RECENTLY_ADDED: {
-    single: "Kürzlich hinzugefügt",
-    plural: "Kürzlich hinzugefügt",
   },
 };
 
@@ -99,7 +95,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     },
   });
 
-  // Discord: UPLOADED/ARCHIVED/RECENTLY_ADDED aus allen offenen Changes (pro Status eine Nachricht)
+  // Discord: UPLOADED/ARCHIVED aus allen offenen Changes (pro Status eine Nachricht)
   const statusToMovies = new Map<Status, string[]>();
   DISCORD_RELEVANT_STATUSES.forEach((s) => statusToMovies.set(s, []));
   const seenMovies = new Set<number>();
@@ -108,11 +104,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     seenMovies.add(change.movieId);
     const list = statusToMovies.get(change.to as Status);
     if (list) {
-      const line =
-        change.to === "RECENTLY_ADDED"
-          ? `- ${change.movie.title} (${change.movie.releaseYear}) ${formatDistanceToNow(change.changedAt, { addSuffix: true, locale: de })}`
-          : `${change.movie.title} (${change.movie.releaseYear})`;
-      list.push(line);
+      list.push(`${change.movie.title} (${change.movie.releaseYear})`);
     }
   }
   for (const [status, movies] of statusToMovies) {
@@ -120,10 +112,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     const config = DISCORD_TITLES[status];
     if (!config) continue;
     const title = movies.length === 1 ? config.single : config.plural;
-    const content =
-      status === "RECENTLY_ADDED"
-        ? `${title}\n\n${movies.join("\n")}`
-        : `${title}\n\n${movies.map((m) => `> **${m}**`).join("\n")}`;
+    const content = `${title}\n\n${movies.map((m) => `> **${m}**`).join("\n")}`;
     await sendDiscordNotification(content, `${title} – ${movies.length} Filme`);
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
@@ -94,7 +95,8 @@ export async function POST(request: Request) {
   }
 
   if (user.totpEnabledAt) {
-    const trustCookie = request.cookies.get(TRUST_COOKIE_NAME)?.value;
+    const cookieStore = await cookies();
+    const trustCookie = cookieStore.get(TRUST_COOKIE_NAME)?.value;
     let trusted = false;
     if (trustCookie) {
       const tokenHash = createHash("sha256").update(trustCookie, "utf8").digest("hex");
