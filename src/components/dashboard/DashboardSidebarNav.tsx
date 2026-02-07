@@ -43,7 +43,12 @@ export function DashboardSidebarNav({ nav, adminNav }: Props) {
           );
         }
         // group = Accordion (Klick auf Label geht zum ersten Unterpunkt)
-        const isExpanded = pathname?.startsWith(item.basePath) ?? false;
+        const isExpanded =
+          pathname != null &&
+          item.children.some(
+            (child) =>
+              pathname === child.href || pathname.startsWith(child.href + "/")
+          );
         const overviewHref = item.children[0]?.href ?? item.basePath;
         return (
           <div key={item.label} className="space-y-0.5">

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { getPublicOrigin } from "@/lib/request-url";
@@ -8,6 +9,12 @@ import {
   SESSION_COOKIE_NAME,
 } from "@/lib/session";
 import { ROLE_COOKIE_NAME } from "@/lib/session/config";
+import {
+  TRUST_COOKIE_NAME,
+  PENDING_2FA_COOKIE_NAME,
+  createPending2FaPayload,
+  PENDING_2FA_MAX_AGE_SEC,
+} from "@/lib/two-factor";
 
 /**
  * POST /api/auth/login
@@ -45,6 +52,13 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { email },
+    select: {
+      id: true,
+      password: true,
+      role: true,
+      totpEnabledAt: true,
+      isMasterAdmin: true,
+    },
   });
 
   if (!user) {
@@ -76,6 +90,40 @@ export async function POST(request: Request) {
       ),
       { status: 302 }
     );
+  }
+
+  if (user.totpEnabledAt) {
+    const trustCookie = request.cookies.get(TRUST_COOKIE_NAME)?.value;
+    let trusted = false;
+    if (trustCookie) {
+      const tokenHash = createHash("sha256").update(trustCookie, "utf8").digest("hex");
+      const device = await prisma.trustedDevice.findFirst({
+        where: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      trusted = !!device;
+    }
+    if (!trusted) {
+      const payload = createPending2FaPayload(user.id);
+      const res = NextResponse.redirect(
+        new URL(
+          `login/2fa?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+          base
+        ),
+        { status: 302 }
+      );
+      res.cookies.set(PENDING_2FA_COOKIE_NAME, payload, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: PENDING_2FA_MAX_AGE_SEC,
+        path: "/",
+      });
+      return res;
+    }
   }
 
   const { sid } = await createSession(

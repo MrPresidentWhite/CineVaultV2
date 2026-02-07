@@ -323,6 +323,10 @@ model User {
   profileBannerColor String? @db.VarChar(12)
   quickActionsJson   String? @db.Text
 
+  /// 2FA: verschlüsselter TOTP-Secret (AES-256-GCM), nur wenn 2FA aktiv.
+  totpSecretEncrypted String?   @db.Text
+  totpEnabledAt      DateTime?
+
   sessions             Session[]
   assignedMovies       Movie[]              @relation("AssignedMovies")
   assignedSeries       Series[]             @relation("AssignedSeries")
@@ -331,7 +335,36 @@ model User {
   movieStatusChanges   MovieStatusChange[]
   statusPreferences    UserStatusPreference[]
 
-  apiKeys ApiKey[]
+  apiKeys        ApiKey[]
+  backupCodes    UserBackupCode[]
+  trustedDevices TrustedDevice[]
+}
+
+/// 2FA-Backup-Codes: einmal verwendbar, gehasht gespeichert.
+model UserBackupCode {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @db.VarChar(255)
+  usedAt    DateTime?
+
+  @@index([userId])
+  @@index([userId, usedAt])
+}
+
+/// 2FA: vertrauenswürdiges Gerät – Token in Cookie, Skip 2FA bis Ablauf.
+model TrustedDevice {
+  id        String   @id @default(cuid())
+  userId   Int
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String  @db.VarChar(255)
+  name     String?  @db.VarChar(191)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
 }
 
 model ApiKey {

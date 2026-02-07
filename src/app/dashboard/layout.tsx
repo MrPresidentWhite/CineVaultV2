@@ -34,9 +34,10 @@ export default async function DashboardLayout({
       type: "group" as const,
       label: "Sicherheit",
       icon: "🔐",
-      basePath: "/dashboard/a",
+      basePath: "/dashboard/account",
       children: [
         { href: "/dashboard/account", label: "Passwort ändern" },
+        { href: "/dashboard/security/2fa", label: "2FA" },
         ...(canEditor ? [{ href: "/dashboard/api-key", label: "API Key" }] : []),
       ],
     },
