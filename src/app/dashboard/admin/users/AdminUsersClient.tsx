@@ -14,6 +14,7 @@ type UserRow = {
   isMasterAdmin: boolean;
   mustChangePassword: boolean;
   locked: boolean;
+  totpEnabledAt: Date | null;
   createdAt: Date;
   avatarUrl: string | null;
   bannerUrl?: string | null;
@@ -115,6 +116,11 @@ export function AdminUsersClient({ users, currentUserId }: Props) {
                   GESPERRT
                 </span>
               )}
+              {u.totpEnabledAt && (
+                <span className="rounded-full border border-green-500/50 bg-green-500/20 px-1.5 py-0.5 text-xs text-green-400">
+                  2FA
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -136,6 +142,15 @@ export function AdminUsersClient({ users, currentUserId }: Props) {
           >
             Passwort zurücksetzen
           </button>
+          {u.totpEnabledAt && (
+            <button
+              type="button"
+              onClick={() => handleDisable2Fa(u.id, u.name)}
+              className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-400 hover:bg-amber-500/20"
+            >
+              2FA Deaktivieren
+            </button>
+          )}
           {!u.isMasterAdmin && (
             <button
               type="button"
@@ -257,6 +272,26 @@ export function AdminUsersClient({ users, currentUserId }: Props) {
       router.refresh();
     } else {
       setError(data.error ?? "Aktion fehlgeschlagen.");
+    }
+  }
+
+  async function handleDisable2Fa(userId: number, name: string) {
+    if (
+      !confirm(
+        `2FA für „${name}" wirklich deaktivieren? Der Benutzer kann sich danach wieder ohne 2FA-Code anmelden.`
+      )
+    )
+      return;
+    setError(null);
+    const res = await fetch(`/api/admin/users/${userId}/disable-2fa`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSuccess("2FA für den Benutzer deaktiviert.");
+      router.refresh();
+    } else {
+      setError(data.error ?? "2FA-Deaktivierung fehlgeschlagen.");
     }
   }
 

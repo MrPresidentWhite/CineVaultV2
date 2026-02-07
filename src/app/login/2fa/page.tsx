@@ -49,15 +49,15 @@ export default async function Login2FaPage({
             className="flex flex-col gap-5"
           >
             <label className="flex flex-col gap-1.5 text-sm">
-              Code
+              Code (6-stelliger TOTP-Code oder Backup-Code z. B. XXXX-XXXX)
               <input
                 type="text"
                 name="code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 required
-                placeholder="000000"
-                maxLength={8}
+                placeholder="000000 oder XXXX-XXXX"
+                maxLength={12}
                 className="rounded-md border-0 bg-[#333] px-3 py-3 text-white placeholder:text-white/60 font-mono text-center tracking-widest"
               />
             </label>

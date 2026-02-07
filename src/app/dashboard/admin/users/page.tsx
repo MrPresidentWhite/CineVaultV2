@@ -23,6 +23,7 @@ export default async function DashboardAdminUsersPage() {
       isMasterAdmin: true,
       mustChangePassword: true,
       locked: true,
+      totpEnabledAt: true,
       createdAt: true,
     },
   });

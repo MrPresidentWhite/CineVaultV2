@@ -89,9 +89,10 @@ export function generateBackupCodes(count: number = BACKUP_CODE_COUNT): string[]
   return codes;
 }
 
-/** Hash eines Backup-Codes für Speicherung (SHA-256 hex). */
+/** Hash eines Backup-Codes für Speicherung (SHA-256 hex). Leerzeichen und Bindestriche werden ignoriert (XXXX-XXXX = XXXXXXXX). */
 export function hashBackupCode(code: string): string {
-  return createHash("sha256").update(code.trim().toUpperCase(), "utf8").digest("hex");
+  const normalized = code.replace(/[\s-]/g, "").toUpperCase();
+  return createHash("sha256").update(normalized, "utf8").digest("hex");
 }
 
 /** Formatiert Backup-Code zur Anzeige (z. B. XXXX-XXXX). */
