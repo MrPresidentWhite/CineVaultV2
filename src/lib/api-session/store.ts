@@ -58,13 +58,24 @@ export async function destroyApiSession(sid: string): Promise<void> {
 }
 
 /**
+ * Liest den Wert eines Cookies aus dem Cookie-Header (kompatibel mit Web API Request).
+ */
+function getCookieFromRequest(request: Request, name: string): string | null {
+  const header = request.headers.get("cookie");
+  if (!header) return null;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));
+  return match ? decodeURIComponent(match[1].trim()) : null;
+}
+
+/**
  * Liest die API v1 Session aus dem Request (Cookie cv.api_sid).
  * Für geschützte /api/v1/* Routen: bei null 401 zurückgeben.
  */
 export async function getApiSessionFromRequest(
   request: Request
 ): Promise<ApiSessionData | null> {
-  const sid = request.cookies.get(API_SESSION_COOKIE_NAME)?.value;
+  const sid = getCookieFromRequest(request, API_SESSION_COOKIE_NAME);
   if (!sid) return null;
   return getApiSession(sid);
 }

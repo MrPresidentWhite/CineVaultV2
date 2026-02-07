@@ -19,12 +19,10 @@ export function verifyChallengeSignature(
   try {
     const key = parseKey(publicKeySsh.trim(), "ssh");
     const type = key.type.toLowerCase();
-    if (type !== "rsa" && type !== "ed25519") return false;
-    const sig = parseSignature(
-      signatureBase64.trim(),
-      type === "curve25519" ? "ed25519" : type,
-      "ssh"
-    );
+    if (type !== "rsa" && type !== "ed25519" && type !== "curve25519")
+      return false;
+    const sigType = type === "curve25519" ? "ed25519" : type;
+    const sig = parseSignature(signatureBase64.trim(), sigType, "ssh");
     const verifier = key.createVerify();
     verifier.update(Buffer.from(nonce, "utf8"));
     return verifier.verify(sig);
