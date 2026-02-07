@@ -429,18 +429,21 @@ export async function ensureTmdbCached(params: {
   size?: TmdbSize;
   contentTypeHint?: string;
   longCache?: boolean;
+  /** Bei true: immer von TMDb laden und nur bei gleichem cv-sha256 Upload überspringen (für Refetch-Images). */
+  forceRefetch?: boolean;
 }): Promise<string> {
   const {
     filePath,
     size = "original",
     contentTypeHint,
     longCache = true,
+    forceRefetch = false,
   } = params;
 
   const cleanPath = String(filePath).replace(/^\/+/, "");
   const key = tmdbKey(cleanPath, size);
 
-  if (await tmdbKeyExistsCached(key)) {
+  if (!forceRefetch && (await tmdbKeyExistsCached(key))) {
     const h = await headObject(key);
     if (h != null) return key;
     // Cache sagt „existiert“, Objekt fehlt in R2 (z. B. anderer Bucket, gelöscht) → Cache löschen und neu laden

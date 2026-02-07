@@ -77,18 +77,21 @@ export async function POST(
       ? await ensureTmdbCached({
           filePath: c.poster_path.replace(/^\//, ""),
           size: "w500",
+          forceRefetch: true,
         })
       : null;
     const backdropKey = c.backdrop_path
       ? await ensureTmdbCached({
           filePath: c.backdrop_path.replace(/^\//, ""),
           size: "original",
+          forceRefetch: true,
         })
       : null;
     const coverKey = c.backdrop_path
       ? await ensureTmdbCached({
           filePath: c.backdrop_path.replace(/^\//, ""),
           size: "w780",
+          forceRefetch: true,
         })
       : null;
 

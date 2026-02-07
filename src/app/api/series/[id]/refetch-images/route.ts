@@ -3,17 +3,16 @@ import { prisma } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
-import { getMovieDetails } from "@/lib/tmdb";
+import { getSeries } from "@/lib/tmdb";
 import { ensureTmdbCached, getObjectAsBuffer, toPublicUrl } from "@/lib/storage";
 import { getAccentFromBuffer } from "@/lib/accent";
-import { invalidateMovieCache } from "@/lib/movie-data";
+import { invalidateSeriesCache, invalidateSeriesListCache } from "@/lib/series-data";
 import { invalidateHomeCache } from "@/lib/home-data";
 
 /**
- * POST /api/movies/[id]/refetch-images
- * Lädt Poster und Backdrop von TMDb, speichert in R2, berechnet Akzentfarben neu
- * (immer, auch wenn sich die Bilder nicht geändert haben) und aktualisiert den Film.
- * Erfordert EDITOR.
+ * POST /api/series/[id]/refetch-images
+ * Lädt Poster und Backdrop von TMDb, speichert in R2 (mit cv-sha256-Duplicate-Check),
+ * berechnet Akzentfarben neu und aktualisiert die Serie. Erfordert EDITOR.
  */
 export async function POST(
   _request: Request,
@@ -30,19 +29,19 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Ungültige ID" }, { status: 400 });
   }
 
-  const m = await prisma.movie.findUnique({
+  const s = await prisma.series.findUnique({
     where: { id: idNum },
     select: { id: true, tmdbId: true },
   });
-  if (!m?.tmdbId) {
+  if (!s?.tmdbId) {
     return NextResponse.json(
-      { ok: false, error: "Film hat keine TMDb-ID" },
+      { ok: false, error: "Serie hat keine TMDb-ID" },
       { status: 400 }
     );
   }
 
   try {
-    const d = await getMovieDetails(m.tmdbId);
+    const d = await getSeries(s.tmdbId);
     if (!d) {
       return NextResponse.json(
         { ok: false, error: "TMDb-Details nicht gefunden" },
@@ -60,7 +59,7 @@ export async function POST(
     const backdropKey = d.backdrop_path
       ? await ensureTmdbCached({
           filePath: d.backdrop_path.replace(/^\//, ""),
-          size: "original",
+          size: "w780",
           forceRefetch: true,
         })
       : null;
@@ -74,7 +73,7 @@ export async function POST(
       ? await getAccentFromBuffer(backdropBuf)
       : null;
 
-    await prisma.movie.update({
+    await prisma.series.update({
       where: { id: idNum },
       data: {
         posterUrl: posterKey,
@@ -83,7 +82,11 @@ export async function POST(
         accentColorBackdrop,
       },
     });
-    await Promise.all([invalidateMovieCache(idNum), invalidateHomeCache()]);
+    await Promise.all([
+      invalidateSeriesCache(idNum),
+      invalidateSeriesListCache(),
+      invalidateHomeCache(),
+    ]);
 
     return NextResponse.json({
       ok: true,
@@ -95,7 +98,7 @@ export async function POST(
       accentColorBackdrop,
     });
   } catch (e) {
-    console.error("refetch-images (movie) failed:", e);
+    console.error("refetch-images (series) failed:", e);
     return NextResponse.json(
       {
         ok: false,
