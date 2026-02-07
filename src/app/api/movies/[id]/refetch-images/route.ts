@@ -4,7 +4,13 @@ import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
 import { getMovieDetails } from "@/lib/tmdb";
-import { ensureTmdbCached, getObjectAsBuffer, toPublicUrl } from "@/lib/storage";
+import {
+  ensureTmdbCached,
+  getObjectAsBuffer,
+  toPublicUrl,
+  NO_POSTER_KEY,
+  NO_BACKDROP_KEY,
+} from "@/lib/storage";
 import { getAccentFromBuffer } from "@/lib/accent";
 import { invalidateMovieCache } from "@/lib/movie-data";
 import { invalidateHomeCache } from "@/lib/home-data";
@@ -55,15 +61,15 @@ export async function POST(
           filePath: d.poster_path.replace(/^\//, ""),
           size: "w500",
           forceRefetch: true,
-        })
-      : null;
+        }).catch(() => NO_POSTER_KEY)
+      : NO_POSTER_KEY;
     const backdropKey = d.backdrop_path
       ? await ensureTmdbCached({
           filePath: d.backdrop_path.replace(/^\//, ""),
           size: "original",
           forceRefetch: true,
-        })
-      : null;
+        }).catch(() => NO_BACKDROP_KEY)
+      : NO_BACKDROP_KEY;
 
     const [posterBuf, backdropBuf] = await Promise.all([
       posterKey ? getObjectAsBuffer(posterKey) : Promise.resolve(null),

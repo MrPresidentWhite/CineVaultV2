@@ -103,6 +103,10 @@ export const StoragePrefix = {
   USER_BANNERS: "uploads/users/banners",
 } as const;
 
+/** Fallback-Keys wenn TMDb kein Poster/Backdrop liefert (Import + Refetch-Images). */
+export const NO_POSTER_KEY = "uploads/assets/no_poster.png";
+export const NO_BACKDROP_KEY = "uploads/assets/no_backdrop.png";
+
 export type TmdbSize =
   | "w92"
   | "w154"

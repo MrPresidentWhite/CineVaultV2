@@ -81,101 +81,108 @@ export default async function SeriesPage({
 
   return (
     <Section title="Serien" href="/">
-      <form
-        method="GET"
-        action="/series"
-        className="filter-card mb-4 md:mb-6"
-      >
-        <input type="hidden" name="page" value="1" />
-        <FilterSection summary="Filter anzeigen">
-        <div className="filter-grid">
-          <label>
-            <span>Suche (Titel)</span>
-            <input
-              name="q"
-              type="search"
-              defaultValue={params.q ?? ""}
-              placeholder="z. B. Breaking Bad"
-              className="input"
-            />
-          </label>
-          <label>
-            <span>Jahr von</span>
-            <input
-              name="yearFrom"
-              type="number"
-              min={YEAR_MIN}
-              max={YEAR_MAX}
-              defaultValue={params.yearFrom ?? ""}
-              className="input"
-            />
-          </label>
-          <label>
-            <span>Jahr bis</span>
-            <input
-              name="yearTo"
-              type="number"
-              min={YEAR_MIN}
-              max={YEAR_MAX}
-              defaultValue={params.yearTo ?? ""}
-              className="input"
-            />
-          </label>
-          <label>
-            <span>Sortierung</span>
-            <select name="sort" defaultValue={params.sort ?? "created_desc"}>
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Pro Seite</span>
-            <select name="pageSize" defaultValue={params.pageSize ?? 24}>
-              {PAGE_SIZES.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="filter-actions">
-          <button type="submit" className="btn btn--primary">
-            Anwenden
-          </button>
-          <Link href="/series" className="btn">
-            Zurücksetzen
-          </Link>
-        </div>
-        </FilterSection>
-      </form>
-
-      {items.length === 0 ? (
-        <p className="text-text/80">Keine Serien gefunden.</p>
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-text/70 break-words">
-            {total} {total === 1 ? "Serie" : "Serien"}
-            {totalPages > 1 && (
-              <span className="block mt-0.5 sm:inline sm:mt-0">Seite {page} von {totalPages}</span>
-            )}
+      <div className="space-y-6 md:space-y-8">
+        <section className="rounded-xl border border-ring bg-panel p-6">
+          <h2 className="text-lg font-semibold text-text">Filter</h2>
+          <p className="mt-1 text-sm text-text/60">
+            Serien nach Kriterien eingrenzen.
           </p>
-          <div className="cards cards--movies">
-            {items.map((s) => (
-              <SeriesCard key={s.id} s={s} />
-            ))}
-          </div>
-          <Pagination
-            totalPages={totalPages}
-            currentPage={page}
-            buildHref={buildHref}
-            ariaLabel="Serien-Seiten"
-          />
-        </>
-      )}
+          <form method="GET" action="/series" className="mt-4">
+            <input type="hidden" name="page" value="1" />
+            <FilterSection summary="Filter anzeigen">
+              <div className="filter-grid">
+                <label>
+                  <span>Suche (Titel)</span>
+                  <input
+                    name="q"
+                    type="search"
+                    defaultValue={params.q ?? ""}
+                    placeholder="z. B. Breaking Bad"
+                    className="input"
+                  />
+                </label>
+                <label>
+                  <span>Jahr von</span>
+                  <input
+                    name="yearFrom"
+                    type="number"
+                    min={YEAR_MIN}
+                    max={YEAR_MAX}
+                    defaultValue={params.yearFrom ?? ""}
+                    className="input"
+                  />
+                </label>
+                <label>
+                  <span>Jahr bis</span>
+                  <input
+                    name="yearTo"
+                    type="number"
+                    min={YEAR_MIN}
+                    max={YEAR_MAX}
+                    defaultValue={params.yearTo ?? ""}
+                    className="input"
+                  />
+                </label>
+                <label>
+                  <span>Sortierung</span>
+                  <select name="sort" defaultValue={params.sort ?? "created_desc"}>
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Pro Seite</span>
+                  <select name="pageSize" defaultValue={params.pageSize ?? 24}>
+                    {PAGE_SIZES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="filter-actions">
+                <button type="submit" className="btn btn--primary">
+                  Anwenden
+                </button>
+                <Link href="/series" className="btn">
+                  Zurücksetzen
+                </Link>
+              </div>
+            </FilterSection>
+          </form>
+        </section>
+
+        <section className="rounded-xl border border-ring bg-panel p-6">
+          <h2 className="text-lg font-semibold text-text">Ergebnisse</h2>
+          {items.length === 0 ? (
+            <p className="mt-3 text-text/80">Keine Serien gefunden.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-text/60 break-words">
+                {total} {total === 1 ? "Serie" : "Serien"}
+                {totalPages > 1 && (
+                  <span className="block mt-0.5 sm:inline sm:mt-0"> · Seite {page} von {totalPages}</span>
+                )}
+              </p>
+              <div className="cards cards--movies mt-5">
+                {items.map((s) => (
+                  <SeriesCard key={s.id} s={s} />
+                ))}
+              </div>
+              <Pagination
+                totalPages={totalPages}
+                currentPage={page}
+                buildHref={buildHref}
+                ariaLabel="Serien-Seiten"
+              />
+            </>
+          )}
+        </section>
+      </div>
     </Section>
   );
 }

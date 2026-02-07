@@ -84,6 +84,7 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 /* API-Dokumentation (Swagger UI): eigenständiges UI, kein App-Design */
@@ -159,9 +160,17 @@ hr.rounded {
   text-shadow: 0 1px 2px rgba(0 0 0 / 0.5);
 }
 
+/* Main: horizontalen Overflow auf Desktop verhindern */
+.main {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 /* Section (einheitlich für Home/Listen) */
 .section {
   margin: 1.75rem 0 2.25rem;
+  max-width: 100%;
+  min-width: 0;
 }
 .section h2 {
   margin: 0 0 0.875rem 0.125rem;
@@ -212,6 +221,7 @@ hr.rounded {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  min-width: 0;
 }
 .filter-grid label {
   display: flex;
@@ -294,9 +304,8 @@ hr.rounded {
     min-height: 44px;
     display: flex;
     align-items: center;
-    padding: 0.5rem 0.75rem;
-    margin: -0.75rem -0.75rem 0.75rem -0.75rem;
     padding: 0.75rem;
+    margin: -0.75rem 0 0.75rem 0;
     background: rgba(255 255 255 / 0.03);
     border-radius: 8px;
   }

@@ -4,7 +4,12 @@ import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
 import { getMovieDetails, getCollectionDetails } from "@/lib/tmdb";
-import { ensureTmdbCached, toPublicUrl } from "@/lib/storage";
+import {
+  ensureTmdbCached,
+  toPublicUrl,
+  NO_POSTER_KEY,
+  NO_BACKDROP_KEY,
+} from "@/lib/storage";
 import {
   invalidateCollectionCache,
   invalidateCollectionsListCache,
@@ -78,22 +83,22 @@ export async function POST(
           filePath: c.poster_path.replace(/^\//, ""),
           size: "w500",
           forceRefetch: true,
-        })
-      : null;
+        }).catch(() => NO_POSTER_KEY)
+      : NO_POSTER_KEY;
     const backdropKey = c.backdrop_path
       ? await ensureTmdbCached({
           filePath: c.backdrop_path.replace(/^\//, ""),
           size: "original",
           forceRefetch: true,
-        })
-      : null;
+        }).catch(() => NO_BACKDROP_KEY)
+      : NO_BACKDROP_KEY;
     const coverKey = c.backdrop_path
       ? await ensureTmdbCached({
           filePath: c.backdrop_path.replace(/^\//, ""),
           size: "w780",
           forceRefetch: true,
-        })
-      : null;
+        }).catch(() => NO_BACKDROP_KEY)
+      : NO_BACKDROP_KEY;
 
     await prisma.collection.update({
       where: { id: col.id },

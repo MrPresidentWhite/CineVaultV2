@@ -95,112 +95,119 @@ export default async function CollectionsPage({
 
   return (
     <Section title="Collections" href="/">
-      <form
-        method="GET"
-        action="/collections"
-        className="filter-card mb-4 md:mb-6"
-      >
-        <input type="hidden" name="page" value="1" />
-        <FilterSection summary="Filter anzeigen">
-        <div className="filter-grid">
-          <label>
-            <span>Suche (Name)</span>
-            <input
-              name="q"
-              type="search"
-              defaultValue={params.q ?? ""}
-              placeholder="z. B. Mission Impossible"
-              className="input"
-            />
-          </label>
-          <label>
-            <span>Poster</span>
-            <select name="hasPoster" defaultValue={params.hasPoster ?? "any"}>
-              <option value="any">— egal —</option>
-              <option value="yes">vorhanden</option>
-              <option value="no">fehlt</option>
-            </select>
-          </label>
-          <label>
-            <span>Cover</span>
-            <select name="hasCover" defaultValue={params.hasCover ?? "any"}>
-              <option value="any">— egal —</option>
-              <option value="yes">vorhanden</option>
-              <option value="no">fehlt</option>
-            </select>
-          </label>
-          <label>
-            <span>Backdrop</span>
-            <select name="hasBackdrop" defaultValue={params.hasBackdrop ?? "any"}>
-              <option value="any">— egal —</option>
-              <option value="yes">vorhanden</option>
-              <option value="no">fehlt</option>
-            </select>
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              name="minOneMovie"
-              value="1"
-              defaultChecked={params.minOneMovie ?? false}
-            />
-            <span>nur mit mindestens 1 Film</span>
-          </label>
-          <label>
-            <span>Sortierung</span>
-            <select name="sort" defaultValue={params.sort ?? "created_desc"}>
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Pro Seite</span>
-            <select name="pageSize" defaultValue={params.pageSize ?? 24}>
-              {PAGE_SIZES.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="filter-actions">
-          <button type="submit" className="btn btn--primary">
-            Anwenden
-          </button>
-          <Link href="/collections" className="btn">
-            Zurücksetzen
-          </Link>
-        </div>
-        </FilterSection>
-      </form>
-
-      {items.length === 0 ? (
-        <p className="text-text/80">Keine Collections gefunden.</p>
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-text/70 break-words">
-            {total} {total === 1 ? "Collection" : "Collections"}
-            {totalPages > 1 && (
-              <span className="block mt-0.5 sm:inline sm:mt-0">Seite {page} von {totalPages}</span>
-            )}
+      <div className="space-y-6 md:space-y-8">
+        <section className="rounded-xl border border-ring bg-panel p-6">
+          <h2 className="text-lg font-semibold text-text">Filter</h2>
+          <p className="mt-1 text-sm text-text/60">
+            Collections nach Kriterien eingrenzen.
           </p>
-          <div className="cards cards--collections">
-            {items.map((c) => (
-              <CollectionCard key={c.id} c={toHomeCollection(c)} />
-            ))}
-          </div>
-          <Pagination
-            totalPages={totalPages}
-            currentPage={page}
-            buildHref={buildHref}
-            ariaLabel="Collections-Seiten"
-          />
-        </>
-      )}
+          <form method="GET" action="/collections" className="mt-4">
+            <input type="hidden" name="page" value="1" />
+            <FilterSection summary="Filter anzeigen">
+              <div className="filter-grid">
+                <label>
+                  <span>Suche (Name)</span>
+                  <input
+                    name="q"
+                    type="search"
+                    defaultValue={params.q ?? ""}
+                    placeholder="z. B. Mission Impossible"
+                    className="input"
+                  />
+                </label>
+                <label>
+                  <span>Poster</span>
+                  <select name="hasPoster" defaultValue={params.hasPoster ?? "any"}>
+                    <option value="any">— egal —</option>
+                    <option value="yes">vorhanden</option>
+                    <option value="no">fehlt</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Cover</span>
+                  <select name="hasCover" defaultValue={params.hasCover ?? "any"}>
+                    <option value="any">— egal —</option>
+                    <option value="yes">vorhanden</option>
+                    <option value="no">fehlt</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Backdrop</span>
+                  <select name="hasBackdrop" defaultValue={params.hasBackdrop ?? "any"}>
+                    <option value="any">— egal —</option>
+                    <option value="yes">vorhanden</option>
+                    <option value="no">fehlt</option>
+                  </select>
+                </label>
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    name="minOneMovie"
+                    value="1"
+                    defaultChecked={params.minOneMovie ?? false}
+                  />
+                  <span>nur mit mindestens 1 Film</span>
+                </label>
+                <label>
+                  <span>Sortierung</span>
+                  <select name="sort" defaultValue={params.sort ?? "created_desc"}>
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Pro Seite</span>
+                  <select name="pageSize" defaultValue={params.pageSize ?? 24}>
+                    {PAGE_SIZES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="filter-actions">
+                <button type="submit" className="btn btn--primary">
+                  Anwenden
+                </button>
+                <Link href="/collections" className="btn">
+                  Zurücksetzen
+                </Link>
+              </div>
+            </FilterSection>
+          </form>
+        </section>
+
+        <section className="rounded-xl border border-ring bg-panel p-6">
+          <h2 className="text-lg font-semibold text-text">Ergebnisse</h2>
+          {items.length === 0 ? (
+            <p className="mt-3 text-text/80">Keine Collections gefunden.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-text/60 break-words">
+                {total} {total === 1 ? "Collection" : "Collections"}
+                {totalPages > 1 && (
+                  <span className="block mt-0.5 sm:inline sm:mt-0"> · Seite {page} von {totalPages}</span>
+                )}
+              </p>
+              <div className="cards cards--collections mt-5">
+                {items.map((c) => (
+                  <CollectionCard key={c.id} c={toHomeCollection(c)} />
+                ))}
+              </div>
+              <Pagination
+                totalPages={totalPages}
+                currentPage={page}
+                buildHref={buildHref}
+                ariaLabel="Collections-Seiten"
+              />
+            </>
+          )}
+        </section>
+      </div>
     </Section>
   );
 }

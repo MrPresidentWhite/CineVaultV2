@@ -8,7 +8,12 @@ import {
 } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { getMovieDetails, getMovieReleaseInfo } from "@/lib/tmdb";
-import { ensureTmdbCached, getObjectAsBuffer } from "@/lib/storage";
+import {
+  ensureTmdbCached,
+  getObjectAsBuffer,
+  NO_POSTER_KEY,
+  NO_BACKDROP_KEY,
+} from "@/lib/storage";
 import { getAccentFromBuffer } from "@/lib/accent";
 import { mapTmdbGenresToEnum } from "@/lib/tmdb-genres";
 
@@ -116,13 +121,17 @@ export async function POST(request: Request) {
 
     onProgress?.(25, "Lade Poster (TMDb → R2) …");
     const posterKey = d.poster_path
-      ? await ensureTmdbCached({ filePath: d.poster_path, size: "w500" })
-      : null;
+      ? await ensureTmdbCached({ filePath: d.poster_path, size: "w500" }).catch(
+          () => NO_POSTER_KEY
+        )
+      : NO_POSTER_KEY;
 
     onProgress?.(50, "Lade Backdrop (TMDb → R2) …");
     const backdropKey = d.backdrop_path
-      ? await ensureTmdbCached({ filePath: d.backdrop_path, size: "w780" })
-      : null;
+      ? await ensureTmdbCached({ filePath: d.backdrop_path, size: "w780" }).catch(
+          () => NO_BACKDROP_KEY
+        )
+      : NO_BACKDROP_KEY;
 
     onProgress?.(75, "Berechne Akzentfarben …");
     const [posterBuf, backdropBuf] = await Promise.all([

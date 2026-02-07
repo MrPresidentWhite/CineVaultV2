@@ -13,7 +13,12 @@ import {
   getTvContentRatings,
   mapTvRatingsToFskDE,
 } from "@/lib/tmdb";
-import { ensureTmdbCached, toPublicUrl } from "@/lib/storage";
+import {
+  ensureTmdbCached,
+  toPublicUrl,
+  NO_POSTER_KEY,
+  NO_BACKDROP_KEY,
+} from "@/lib/storage";
 import { getAccentFromImage } from "@/lib/accent";
 import { mapTmdbTVGenresToEnum } from "@/lib/tmdb-genres";
 
@@ -62,11 +67,15 @@ export async function POST(request: Request) {
 
     const [posterKey, backdropKey] = await Promise.all([
       sd.poster_path
-        ? ensureTmdbCached({ filePath: sd.poster_path, size: "w500" })
-        : Promise.resolve<string | null>(null),
+        ? ensureTmdbCached({ filePath: sd.poster_path, size: "w500" }).catch(
+            () => NO_POSTER_KEY
+          )
+        : Promise.resolve(NO_POSTER_KEY),
       sd.backdrop_path
-        ? ensureTmdbCached({ filePath: sd.backdrop_path, size: "w780" })
-        : Promise.resolve<string | null>(null),
+        ? ensureTmdbCached({ filePath: sd.backdrop_path, size: "w780" }).catch(
+            () => NO_BACKDROP_KEY
+          )
+        : Promise.resolve(NO_BACKDROP_KEY),
     ]);
 
     const accentSeries = posterKey
@@ -165,8 +174,8 @@ export async function POST(request: Request) {
         ? await ensureTmdbCached({
             filePath: sdSeason.poster_path,
             size: "w342",
-          })
-        : null;
+          }).catch(() => NO_POSTER_KEY)
+        : NO_POSTER_KEY;
       const seasonAccent = seasonPosterKey
         ? await getAccentFromImage(toPublicUrl(seasonPosterKey))
         : null;
