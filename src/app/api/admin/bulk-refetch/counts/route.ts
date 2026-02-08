@@ -18,7 +18,12 @@ export async function GET() {
     prisma.movie.count({ where: { tmdbId: { not: null } } }),
     prisma.series.count({ where: { tmdbId: { not: null } } }),
     prisma.collection.count({
-      where: { movies: { some: { tmdbId: { not: null } } } },
+      where: {
+        OR: [
+          { tmdbId: { not: null } },
+          { movies: { some: { tmdbId: { not: null } } } },
+        ],
+      },
     }),
   ]);
 

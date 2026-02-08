@@ -370,7 +370,12 @@ export async function POST(request: Request) {
       }
     } else {
       const collections = await prisma.collection.findMany({
-        where: { movies: { some: { tmdbId: { not: null } } } },
+        where: {
+          OR: [
+            { tmdbId: { not: null } },
+            { movies: { some: { tmdbId: { not: null } } } },
+          ],
+        },
         select: {
           id: true,
           name: true,
@@ -378,6 +383,7 @@ export async function POST(request: Request) {
           posterUrl: true,
           backdropUrl: true,
           coverUrl: true,
+          tmdbId: true,
           movies: {
             select: { tmdbId: true },
             take: 1,
@@ -390,32 +396,31 @@ export async function POST(request: Request) {
       });
 
       for (const col of collections) {
-        if (!col.movies.length || !col.movies[0].tmdbId) {
+        let tmdbCollectionId: number | null = col.tmdbId ?? null;
+        if (tmdbCollectionId == null && col.movies.length && col.movies[0].tmdbId) {
+          const firstMovie = await getMovieDetails(col.movies[0].tmdbId!);
+          tmdbCollectionId = firstMovie?.belongs_to_collection?.id ?? null;
+          if (tmdbCollectionId != null) {
+            await prisma.collection.update({
+              where: { id: col.id },
+              data: { tmdbId: tmdbCollectionId },
+            });
+          }
+        }
+
+        if (!tmdbCollectionId) {
           log.push({
             type: "collection",
             id: col.id,
             name: col.name,
             result: "skipped",
-            message: "Kein Film mit TMDb-ID",
+            message: "TMDb-Collection-ID nicht ermittelbar (weder an Collection noch über Film)",
           });
           skipped++;
           continue;
         }
 
         try {
-          const firstMovie = await getMovieDetails(col.movies[0].tmdbId!);
-          const tmdbCollectionId = firstMovie?.belongs_to_collection?.id ?? null;
-          if (!tmdbCollectionId) {
-            log.push({
-              type: "collection",
-              id: col.id,
-              name: col.name,
-              result: "skipped",
-              message: "TMDb-Collection-ID nicht ermittelbar",
-            });
-            skipped++;
-            continue;
-          }
 
           const c = await getCollectionDetails(tmdbCollectionId);
           if (!c) {
