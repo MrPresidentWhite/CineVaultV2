@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 type Props = {
   callbackUrl: string;
@@ -8,57 +8,18 @@ type Props = {
 };
 
 export function Login2FaForm({ callbackUrl, initialError }: Props) {
-  const [error, setError] = useState<string | null>(initialError ?? null);
   const submittedRef = useRef(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (submittedRef.current) return;
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (submittedRef.current) {
+      e.preventDefault();
+      return;
+    }
     submittedRef.current = true;
-
     const form = e.currentTarget;
     const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
     if (btn) btn.disabled = true;
-
-    const code = (form.elements.namedItem("code") as HTMLInputElement)?.value?.trim()?.replace(/\s/g, "") ?? "";
-    const trustDevice = (form.elements.namedItem("trustDevice") as HTMLInputElement)?.checked ?? false;
-
-    if (!code) {
-      setError("Code fehlt.");
-      if (btn) btn.disabled = false;
-      submittedRef.current = false;
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/auth/login/2fa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, trustDevice, callbackUrl }),
-        credentials: "same-origin",
-        redirect: "manual",
-      });
-
-      if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
-        const location = res.headers.get("Location") ?? res.url;
-        if (location) {
-          window.location.href = location;
-          return;
-        }
-      }
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(typeof data.error === "string" ? data.error : "Code ungültig oder bereits verwendet.");
-        submittedRef.current = false;
-        if (btn) btn.disabled = false;
-        return;
-      }
-    } catch {
-      setError("Netzwerkfehler. Bitte erneut versuchen.");
-      submittedRef.current = false;
-      if (btn) btn.disabled = false;
-    }
+    // Native Submit: Browser macht POST und folgt der 302 – kein fetch, kein Download auf Mobile
   };
 
   return (
@@ -68,9 +29,9 @@ export function Login2FaForm({ callbackUrl, initialError }: Props) {
       onSubmit={handleSubmit}
       className="flex flex-col gap-5"
     >
-      {error && (
+      {initialError && (
         <div className="rounded-lg border border-red-500/50 bg-red-950/80 px-4 py-3 text-sm text-red-100">
-          {error}
+          {initialError}
         </div>
       )}
 
