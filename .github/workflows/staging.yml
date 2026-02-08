@@ -12,9 +12,10 @@ jobs:
   staging:
     runs-on: ubuntu-latest
     env:
-      # Nur für CI-Build: src/lib/env.ts verlangt in Prod ein gesetztes SESSION_SECRET.
-      # Echte Prod nutzt das Secret aus der Server-.env; hier reicht ein Platzhalter.
+      # Nur für CI-Build: src/lib/env.ts verlangt in Prod SESSION_SECRET und getDatabaseUrl() DB-Config.
+      # Echte Prod nutzt Secrets aus der Server-.env; hier reichen Platzhalter (kein echter DB-Zugriff).
       SESSION_SECRET: "ci-build-placeholder-not-used-at-runtime"
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
