@@ -26,24 +26,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prisma generate
+        run: npm run db:generate
+
       - name: Lint
         id: lint
         continue-on-error: true
-        run: npm run lint 2>&1 | tee lint.txt
+        run: |
+          npm run lint 2>&1 | tee lint.txt
+          exit ${PIPESTATUS[0]}
 
       - name: Test
         id: test
         continue-on-error: true
-        run: npm test 2>&1 | tee test.txt
+        run: |
+          npm test 2>&1 | tee test.txt
+          exit ${PIPESTATUS[0]}
 
       - name: Build
         id: build
-        run: npm run build 2>&1 | tee build.txt
+        run: |
+          npm run build 2>&1 | tee build.txt
+          exit ${PIPESTATUS[0]}
 
       - name: Logging-Check (keine Secrets in Logs, v2 Abschnitt 15.3)
         id: logging-check
         continue-on-error: true
-        run: node scripts/staging-logging-check.mjs logging-check.txt
+        run: node scripts/staging-logging-check.mjs logging-check.txt || exit 1
 
       - name: Staging-Report an Discord (mit Grok)
         if: always()
