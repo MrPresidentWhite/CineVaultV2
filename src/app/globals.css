@@ -453,6 +453,8 @@ hr.rounded {
 .cv-hover__panel {
   position: absolute;
   inset: 0;
+  display: flex;
+  flex-direction: column;
   background: #0f0f0f;
   border: 1px solid var(--ring);
   border-radius: 12px;
@@ -464,10 +466,11 @@ hr.rounded {
   z-index: 40;
   overflow: hidden;
   min-width: 280px;
+  height: 380px;
 }
 .cv-hover__panel--wide {
   min-width: 320px;
-  height: 270px;
+  height: 300px;
 }
 .cv-hover.is-open > .card {
   transform: scale(1.02);
@@ -480,10 +483,11 @@ hr.rounded {
 }
 .cvh-banner {
   position: relative;
+  flex-shrink: 0;
   width: 100%;
   height: 42%;
-  min-height: 110px;
-  max-height: 160px;
+  min-height: 100px;
+  max-height: 140px;
   overflow: hidden;
   border-radius: 12px 12px 0 0;
 }
@@ -494,18 +498,27 @@ hr.rounded {
   display: block;
 }
 .cv-hover__panel--wide .cvh-banner {
-  height: 48%;
-  min-height: 120px;
-  max-height: 180px;
+  height: 44%;
+  min-height: 100px;
+  max-height: 130px;
 }
 .cvh-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 10px 12px 12px;
 }
 .cvh-title {
   font-weight: 700;
   color: #fff;
-  line-height: 1.2;
+  line-height: 1.25;
   margin-bottom: 4px;
+  flex-shrink: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .cvh-meta {
   color: #bdbdbd;
@@ -513,10 +526,14 @@ hr.rounded {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
 }
 .cvh-overview {
-  margin: 0 0 10px;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
   color: #d4d4d4;
   font-size: 0.9rem;
   line-height: 1.35;
@@ -524,10 +541,15 @@ hr.rounded {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
-  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, #000 85%, transparent);
 }
 .cvh-actions {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 10px;
   display: flex;
+  justify-content: flex-start;
+  align-items: center;
   gap: 8px;
 }
 .cvh-btn {

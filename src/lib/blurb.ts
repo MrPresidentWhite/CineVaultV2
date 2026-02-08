@@ -15,11 +15,22 @@ function truncateWords(s: string, maxWords: number): [string, boolean] {
   return [parts.slice(0, maxWords).join(" "), true];
 }
 
+/** Letztes Wort-/Satzzeichen vor maxChars finden, damit nie mitten im Wort abgeschnitten wird. */
+function lastBoundaryBefore(cut: string): number {
+  let idx = -1;
+  for (const c of [" ", ",", ".", "!", "?", ";", ":", "–", "—"]) {
+    const i = cut.lastIndexOf(c);
+    if (i > idx) idx = i;
+  }
+  return idx;
+}
+
 function truncateChars(s: string, maxChars: number): [string, boolean] {
   if (s.length <= maxChars) return [s, false];
   const cut = s.slice(0, maxChars);
-  const idx = cut.lastIndexOf(" ");
-  return [idx > 0 ? cut.slice(0, idx) : cut, true];
+  const idx = lastBoundaryBefore(cut);
+  const out = idx > 0 ? cut.slice(0, idx) : cut;
+  return [out.trimEnd(), true];
 }
 
 export type BlurbOptions = {
@@ -41,5 +52,5 @@ export function makeBlurb(
   shortened = shortened || did;
   [s, did] = truncateChars(s, maxChars);
   shortened = shortened || did;
-  return shortened ? s + "…" : s;
+  return shortened ? s.trimEnd() + " [...]" : s;
 }

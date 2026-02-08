@@ -13,10 +13,7 @@ function fmtRuntime(min: number | null): string | null {
 export function MovieHoverPanel({ m }: { m: HomeMovie }) {
   const accent = m.accentColor ?? "#FFD700";
   const available = isAvailable(m.status);
-  const blurb = makeBlurb(
-    (m.tagline && m.tagline.trim()) ? m.tagline : m.overview,
-    { maxWords: 14, maxChars: 60 }
-  );
+  const blurb = makeBlurb(m.overview, { maxWords: 28, maxChars: 160 });
 
   return (
     <>

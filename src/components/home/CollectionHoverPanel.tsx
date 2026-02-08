@@ -7,7 +7,7 @@ export function CollectionHoverPanel({ c }: { c: HomeCollection }) {
   const accent = c.accentColor ?? "#FFD700";
   const blurb = makeBlurb(
     (c.overview && c.overview.trim()) ? c.overview : null,
-    { maxWords: 16, maxChars: 120 }
+    { maxWords: 20, maxChars: 100 }
   );
   const bannerUrl = c.coverUrl ?? null;
 
@@ -32,6 +32,9 @@ export function CollectionHoverPanel({ c }: { c: HomeCollection }) {
         style={{ ["--accent" as string]: accent }}
       >
         <div className="cvh-title">{c.name}</div>
+        <div className="cvh-meta">
+          <span>{c.movieCount} {c.movieCount === 1 ? "Film" : "Filme"}</span>
+        </div>
         {blurb && <p className="cvh-overview">{blurb}</p>}
         <div className="cvh-actions">
           <Link
