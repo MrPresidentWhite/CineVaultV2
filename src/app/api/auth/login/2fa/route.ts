@@ -105,7 +105,7 @@ export async function POST(request: Request) {
   let codeValid = false;
   if (/^\d{6}$/.test(code)) {
     const secret = decryptTotpSecret(user.totpSecretEncrypted ?? "");
-    codeValid = secret ? verifyTotpToken(code, secret) : false;
+    codeValid = secret ? await verifyTotpToken(code, secret) : false;
   } else {
     const hash = hashBackupCode(code);
     const backup = await prisma.userBackupCode.findFirst({

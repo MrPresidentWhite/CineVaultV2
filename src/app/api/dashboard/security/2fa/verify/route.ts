@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   }
 
   const secret = decryptTotpSecret(pendingEncrypted);
-  if (!secret || !verifyTotpToken(code, secret)) {
+  if (!secret || !(await verifyTotpToken(code, secret))) {
     return NextResponse.json(
       { ok: false, error: "Ungültiger oder abgelaufener Code." },
       { status: 400 }

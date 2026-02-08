@@ -1,10 +1,10 @@
 /**
  * 2FA: TOTP (30-Sekunden-Codes), Secret-Verschlüsselung, Backup-Codes.
- * Nutzt otplib für TOTP, AES-256-GCM für Secret in der DB (Präfix "2fa.").
+ * Nutzt otplib v13 für TOTP, AES-256-GCM für Secret in der DB (Präfix "2fa.").
  */
 
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "node:crypto";
-import { authenticator } from "otplib";
+import { generateSecret, generateURI, verify } from "otplib";
 import { SESSION_SECRET } from "./env";
 
 const ALGO = "aes-256-gcm";
@@ -22,21 +22,22 @@ function getKey(): Buffer {
 
 /** Generiert einen neuen TOTP-Secret (Base32). */
 export function generateTotpSecret(): string {
-  return authenticator.generateSecret();
+  return generateSecret();
 }
 
-/** Erzeugt otpauth-URI für QR-Code (issuer + account = E-Mail). */
+/** Erzeugt otpauth-URI für QR-Code (issuer + label = E-Mail). */
 export function getTotpKeyUri(secret: string, email: string, issuer: string): string {
-  return authenticator.keyuri(email, issuer, secret);
+  return generateURI({ issuer, label: email, secret });
 }
 
-/** Prüft einen 6-stelligen TOTP-Code (mit Toleranz-Fenster). */
-export function verifyTotpToken(token: string, secret: string): boolean {
+/** Prüft einen 6-stelligen TOTP-Code (mit Toleranz-Fenster). Async (otplib v13). */
+export async function verifyTotpToken(token: string, secret: string): Promise<boolean> {
   if (!token?.trim() || !secret?.trim()) return false;
   const cleaned = token.replace(/\s/g, "");
   if (!/^\d{6}$/.test(cleaned)) return false;
   try {
-    return authenticator.check(cleaned, secret);
+    const result = await verify({ secret, token: cleaned });
+    return result.valid;
   } catch {
     return false;
   }
