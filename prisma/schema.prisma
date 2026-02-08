@@ -197,6 +197,7 @@ model SeriesGenre {
 // === Collection ===
 model Collection {
   id                  Int     @id @default(autoincrement())
+  tmdbId              Int?    @unique
   name                String  @db.VarChar(191)
   posterUrl           String? @db.VarChar(1024)
   coverUrl            String? @db.VarChar(1024)

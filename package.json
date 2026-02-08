@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:import-mysql": "tsx scripts/migrate-mysql-to-postgres.ts"
+    "db:import-mysql": "tsx scripts/migrate-mysql-to-postgres.ts",
+    "db:link-collections": "tsx scripts/link-movie-collections.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.982.0",

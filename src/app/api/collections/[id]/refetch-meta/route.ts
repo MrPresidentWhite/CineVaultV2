@@ -35,6 +35,7 @@ export async function POST(
     select: {
       id: true,
       name: true,
+      tmdbId: true,
       movies: {
         select: { tmdbId: true },
         take: 1,
@@ -50,15 +51,22 @@ export async function POST(
     );
   }
 
-  let tmdbCollectionId: number | null = null;
-  if (col.movies.length && col.movies[0].tmdbId) {
+  let tmdbCollectionId: number | null = col.tmdbId ?? null;
+  if (tmdbCollectionId == null && col.movies.length && col.movies[0].tmdbId) {
     const d = await getMovieDetails(col.movies[0].tmdbId);
     tmdbCollectionId = d?.belongs_to_collection?.id ?? null;
+    // Beim nächsten Mal direkt nutzbar machen
+    if (tmdbCollectionId != null) {
+      await prisma.collection.update({
+        where: { id: col.id },
+        data: { tmdbId: tmdbCollectionId },
+      });
+    }
   }
 
   if (!tmdbCollectionId) {
     return NextResponse.json(
-      { ok: false, error: "TMDb-Collection-ID konnte nicht ermittelt werden" },
+      { ok: false, error: "TMDb-Collection-ID konnte nicht ermittelt werden (weder an der Collection hinterlegt noch über einen Film)" },
       { status: 400 }
     );
   }

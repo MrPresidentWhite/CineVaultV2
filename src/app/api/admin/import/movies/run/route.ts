@@ -16,6 +16,7 @@ import {
 } from "@/lib/storage";
 import { getAccentFromBuffer } from "@/lib/accent";
 import { mapTmdbGenresToEnum } from "@/lib/tmdb-genres";
+import { getOrCreateCollectionByTmdbId } from "@/lib/collection-tmdb";
 
 function mapDeCertificationToFsk(cert?: string | null): number | null {
   if (!cert) return null;
@@ -115,6 +116,14 @@ export async function POST(request: Request) {
       throw new Error("TMDb-Details nicht gefunden");
     }
 
+    let collectionId: number | null = null;
+    if (d.belongs_to_collection?.id) {
+      collectionId = await getOrCreateCollectionByTmdbId(
+        d.belongs_to_collection.id,
+        (p, msg) => onProgress?.(p * 0.2, msg)
+      );
+    }
+
     const year = d.release_date
       ? new Date(d.release_date).getFullYear()
       : new Date().getFullYear();
@@ -197,6 +206,9 @@ export async function POST(request: Request) {
                 })),
               },
             }
+          : {}),
+        ...(collectionId != null
+          ? { collection: { connect: { id: collectionId } } }
           : {}),
       },
       select: { id: true, title: true },
