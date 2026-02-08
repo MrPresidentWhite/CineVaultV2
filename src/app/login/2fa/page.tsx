@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Login2FaForm } from "./Login2FaForm";
 
 type SearchParams = { error?: string; callbackUrl?: string };
 
@@ -37,45 +38,7 @@ export default async function Login2FaPage({
             Gib den 6-stelligen Code aus deiner Authenticator-App ein oder einen Backup-Code.
           </p>
 
-          {error && (
-            <div className="rounded-lg border border-red-500/50 bg-red-950/80 px-4 py-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
-
-          <form
-            method="POST"
-            action="/api/auth/login/2fa"
-            className="flex flex-col gap-5"
-          >
-            <label className="flex flex-col gap-1.5 text-sm">
-              Code (6-stelliger TOTP-Code oder Backup-Code z. B. XXXX-XXXX)
-              <input
-                type="text"
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                required
-                placeholder="000000 oder XXXX-XXXX"
-                maxLength={12}
-                className="rounded-md border-0 bg-[#333] px-3 py-3 text-white placeholder:text-white/60 font-mono text-center tracking-widest"
-              />
-            </label>
-
-            <label className="flex cursor-pointer items-center gap-2 py-2.5 text-[13px] text-[#ddd]">
-              <input type="checkbox" name="trustDevice" value="1" className="rounded" />
-              <span>Dieses Gerät 30 Tage als vertrauenswürdig speichern</span>
-            </label>
-
-            <input type="hidden" name="callbackUrl" value={callbackUrl} />
-
-            <button
-              type="submit"
-              className="mt-4 min-h-[48px] rounded-md border-0 bg-gold px-4 py-3 font-bold text-black transition hover:bg-[#e6c200]"
-            >
-              Bestätigen
-            </button>
-          </form>
+          <Login2FaForm callbackUrl={callbackUrl} initialError={error} />
 
           <p className="text-[13px] text-[#aaa]">
             <Link href="/login" className="text-gold hover:underline">

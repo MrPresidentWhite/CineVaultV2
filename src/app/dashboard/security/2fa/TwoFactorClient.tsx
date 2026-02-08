@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getCsrfToken, csrfHeaders, setCsrfToken } from "@/lib/csrf-client";
 
@@ -24,6 +24,7 @@ export function TwoFactorClient({ initialEnabled }: Props) {
   const [code, setCode] = useState("");
   const [disablePassword, setDisablePassword] = useState("");
   const [disableCode, setDisableCode] = useState("");
+  const submittingRef = useRef(false);
 
   const fetchStatus = async () => {
     try {
@@ -40,6 +41,8 @@ export function TwoFactorClient({ initialEnabled }: Props) {
   }, []);
 
   const handleStartSetup = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setLoading(true);
     try {
@@ -61,11 +64,14 @@ export function TwoFactorClient({ initialEnabled }: Props) {
       setError("Netzwerkfehler.");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setLoading(true);
     try {
@@ -106,6 +112,8 @@ export function TwoFactorClient({ initialEnabled }: Props) {
   };
 
   const handleTrustDevice = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setLoading(true);
     try {
@@ -125,11 +133,14 @@ export function TwoFactorClient({ initialEnabled }: Props) {
       setError("Netzwerkfehler.");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
   const handleDisable = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setLoading(true);
     try {
@@ -157,6 +168,7 @@ export function TwoFactorClient({ initialEnabled }: Props) {
       setError("Netzwerkfehler.");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
