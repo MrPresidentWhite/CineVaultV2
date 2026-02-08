@@ -1,0 +1,66 @@
+# Staging: Lint, Tests, Build → Staging-Report (Grok + Discord) → bei Erfolg wird Deploy getriggert
+# Läuft bei Push auf main. Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
+# Secrets: DISCORD_STAGING_WEBHOOK, GROK_API_URL, GROK_API_KEY, GROK_API_MODEL
+
+name: Staging
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint 2>&1 | tee lint.txt
+
+      - name: Test
+        id: test
+        continue-on-error: true
+        run: npm test 2>&1 | tee test.txt
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        run: npm run build 2>&1 | tee build.txt
+
+      - name: Logging-Check (keine Secrets in Logs, v2 Abschnitt 15.3)
+        id: logging-check
+        continue-on-error: true
+        run: node scripts/staging-logging-check.mjs logging-check.txt
+
+      - name: Staging-Report an Discord (mit Grok)
+        if: always()
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          LOGGING_CHECK_OUTCOME: ${{ steps.logging-check.outcome }}
+          DISCORD_STAGING_WEBHOOK: ${{ secrets.DISCORD_STAGING_WEBHOOK }}
+          GROK_API_URL: ${{ secrets.GROK_API_URL }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          GROK_API_MODEL: ${{ secrets.GROK_API_MODEL }}
+        run: node scripts/staging-report-discord.mjs lint.txt test.txt build.txt logging-check.txt
+
+      - name: Staging fehlgeschlagen
+        if: always() && (steps.lint.outcome == 'failure' || steps.test.outcome == 'failure' || steps.build.outcome == 'failure' || steps.logging-check.outcome == 'failure')
+        run: |
+          echo "Mindestens ein Check (Lint/Tests/Build/Logging-Check) ist fehlgeschlagen. Kein Deployment."
+          exit 1

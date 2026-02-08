@@ -1,14 +1,14 @@
 /**
  * Next.js Proxy (ehem. Middleware): Geschützte Routen absichern + Smart Back-Navigation.
  * - Prüft Session-Cookie (cv.sid); Validierung in getAuth() / getSession().
- * - Rollen-Cookie (cv.role): blockiert Routen, für die der User keine Berechtigung hat.
+ * - Rolle aus Session (effectiveRole); keine Rollen-Cookies mehr.
  * - Pflegt Nav-Stack und setzt backUrl-Cookie für „smart“ Zurück-Buttons.
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getPublicOrigin } from "@/lib/request-url";
-import { SESSION_COOKIE_NAME, ROLE_COOKIE_NAME } from "@/lib/session/config";
+import { SESSION_COOKIE_NAME } from "@/lib/session/config";
 import { getSessionFromStore } from "@/lib/session/store";
 import {
   normalizeUrl,
@@ -92,15 +92,15 @@ export async function proxy(request: NextRequest) {
     );
 
   /** Kein Cookie oder Session in DB ungültig/abgelaufen → wie nicht angemeldet behandeln. */
-  let sessionValid = false;
+  let session: Awaited<ReturnType<typeof getSessionFromStore>> = null;
   if (sid) {
     try {
-      const session = await getSessionFromStore(sid);
-      sessionValid = session != null && session.userId != null;
+      session = await getSessionFromStore(sid);
     } catch {
-      sessionValid = false;
+      session = null;
     }
   }
+  const sessionValid = session != null && session.userId != null;
 
   if (!sessionValid) {
     const shouldAutoLogin = isDev && pathname === "/";
@@ -119,8 +119,8 @@ export async function proxy(request: NextRequest) {
 
   const requiredRole = getRequiredRole(pathname);
   if (requiredRole) {
-    const userRole = request.cookies.get(ROLE_COOKIE_NAME)?.value?.trim();
-    if (userRole && !hasRoleAtLeast(userRole, requiredRole)) {
+    const userRole = (session?.effectiveRole ?? "VIEWER").trim();
+    if (!hasRoleAtLeast(userRole, requiredRole)) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json(
           { error: "Forbidden", message: "Keine Berechtigung für diese Route." },

@@ -1,0 +1,11 @@
+---
+description: XSS-Schutz – Nutzer-steuerbare Daten nur als Text rendern (Security-Report v2 Abschnitt 11.2)
+globs: src/**/*.tsx, src/**/*.ts
+alwaysApply: false
+---
+
+# XSS-Schutz (Nutzerdaten)
+
+- **Nutzer-steuerbare Daten** (z. B. Filmtitel, Namen, E-Mails, Collection-Namen, Beschreibungen) **nur als Text** rendern: in JSX ausschließlich `{variable}` verwenden. React escaped das automatisch.
+- **Nicht verwenden:** `dangerouslySetInnerHTML`, `innerHTML`, `eval(…)`, `new Function(…)` mit User-Input. Keine HTML-Strings aus Nutzerdaten einbauen.
+- **Falls später Rich-Text nötig:** Nur über eine zentrale Sanitizer-Funktion (z. B. DOMPurify) und dann ausschließlich an einer definierten Stelle; sonst weiterhin nur Text-Rendering.

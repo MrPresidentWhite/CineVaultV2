@@ -11,6 +11,7 @@ import {
   hashBackupCode,
   BACKUP_CODE_COUNT,
 } from "@/lib/two-factor";
+import { getCsrfTokenFromRequest, requireCsrf, generateCsrfToken } from "@/lib/csrf";
 
 type SessionWithPending = { pendingTotpSecret?: string };
 
@@ -26,6 +27,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Nicht berechtigt" }, { status: 403 });
   }
 
+  let body: { code?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Ungültiger Body" }, { status: 400 });
+  }
+
+  const csrfToken = getCsrfTokenFromRequest(request, body);
+  const csrfError = requireCsrf(auth.session, csrfToken);
+  if (csrfError) {
+    return NextResponse.json({ ok: false, error: csrfError }, { status: 403 });
+  }
+
   const sid = await getSessionIdFromCookie();
   if (!sid) {
     return NextResponse.json({ ok: false, error: "Keine Session" }, { status: 401 });
@@ -38,13 +52,6 @@ export async function POST(request: Request) {
       { ok: false, error: "Kein 2FA-Setup gestartet. Bitte Setup erneut starten." },
       { status: 400 }
     );
-  }
-
-  let body: { code?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Ungültiger Body" }, { status: 400 });
   }
 
   const code = typeof body.code === "string" ? body.code.trim() : "";
@@ -79,13 +86,16 @@ export async function POST(request: Request) {
     }),
   ]);
 
+  const newCsrfToken = generateCsrfToken();
   await updateSession(sid, {
     ...session!,
     pendingTotpSecret: undefined,
+    csrfToken: newCsrfToken,
   });
 
   return NextResponse.json({
     ok: true,
     backupCodes,
+    csrfToken: newCsrfToken,
   });
 }

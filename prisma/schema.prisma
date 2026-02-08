@@ -310,17 +310,38 @@ enum Role {
   VIEWER
 }
 
+/// Typ für fehlgeschlagene Login-/2FA-Versuche (Rate-Limit + Security-Report).
+enum AuthFailureType {
+  LOGIN
+  TWO_FA
+}
+
+/// Fehlgeschlagene Login-/2FA-Versuche: pro IP und pro Account (Rate-Limit, Admin-Report).
+model LoginFailure {
+  id         Int            @id @default(autoincrement())
+  ipAddress  String         @db.VarChar(45)
+  identifier String         @db.VarChar(255)
+  type       AuthFailureType
+  createdAt  DateTime       @default(now())
+
+  @@index([ipAddress, createdAt])
+  @@index([identifier, createdAt])
+  @@index([createdAt])
+}
+
 model User {
-  id                 Int      @id @default(autoincrement())
-  email              String   @unique
-  password           String   @db.VarChar(255)
-  name               String   @db.VarChar(191)
-  role               Role     @default(VIEWER)
-  isMasterAdmin      Boolean  @default(false)
-  mustChangePassword Boolean  @default(false)
-  locked             Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  password           String    @db.VarChar(255)
+  name               String    @db.VarChar(191)
+  role               Role      @default(VIEWER)
+  isMasterAdmin      Boolean   @default(false)
+  mustChangePassword Boolean   @default(false)
+  locked             Boolean   @default(false)
+  /// Temporäre Sperre nach Brute-Force-Erkennung (bis zu diesem Zeitpunkt).
+  lockedUntil        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   profileImageKey    String? @db.VarChar(1024)
   profileBannerKey   String? @db.VarChar(1024)

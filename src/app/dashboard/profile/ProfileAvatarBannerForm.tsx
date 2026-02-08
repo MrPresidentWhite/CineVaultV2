@@ -89,7 +89,7 @@ export function ProfileAvatarBannerForm({
         Avatar & Banner
       </h2>
       <p className="text-sm text-text/70 mb-4">
-        Wähle ein Bild für Avatar und Banner. Max. 5 MB, Formate: JPEG, PNG, WebP, GIF, SVG, AVIF.
+        Wähle ein Bild für Avatar und Banner. Max. 5 MB, Formate: JPEG, PNG, WebP, GIF, AVIF.
       </p>
       <div className="grid gap-6 sm:grid-cols-2 max-w-2xl">
         <div>
@@ -115,7 +115,7 @@ export function ProfileAvatarBannerForm({
           <input
             ref={avatarInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
             className="sr-only"
             onChange={uploadAvatar}
             disabled={avatarStatus === "loading"}
@@ -152,7 +152,7 @@ export function ProfileAvatarBannerForm({
           <input
             ref={bannerInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
             className="sr-only"
             onChange={uploadBanner}
             disabled={bannerStatus === "loading"}

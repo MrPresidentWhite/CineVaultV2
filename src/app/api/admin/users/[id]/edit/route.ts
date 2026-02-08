@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
+import { updateSession } from "@/lib/session";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
 
 async function guardMaster(targetUserId: number, actorUserId: number): Promise<boolean> {
@@ -63,6 +64,13 @@ export async function POST(
       where: { id: idNum },
       data: { name, email, role: role as "ADMIN" | "EDITOR" | "VIEWER" },
     });
+    const sessions = await prisma.session.findMany({
+      where: { userId: idNum },
+      select: { sid: true },
+    });
+    for (const s of sessions) {
+      await updateSession(s.sid, { effectiveRole: role, viewAsRole: undefined });
+    }
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const err = e as { code?: string };

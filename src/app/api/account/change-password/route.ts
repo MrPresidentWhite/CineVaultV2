@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
+import { getSessionIdFromCookie, updateSession } from "@/lib/session";
 import { verifyPassword, hashPassword } from "@/lib/password";
+import { getCsrfTokenFromRequest, requireCsrf, generateCsrfToken } from "@/lib/csrf";
 
 /**
  * POST /api/account/change-password
@@ -19,6 +21,12 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ ok: false, error: "Ungültiges JSON" }, { status: 400 });
+  }
+
+  const csrfToken = getCsrfTokenFromRequest(request, body);
+  const csrfError = requireCsrf(auth.session, csrfToken);
+  if (csrfError) {
+    return NextResponse.json({ ok: false, error: csrfError }, { status: 403 });
   }
 
   const userId = auth.user.id;
@@ -58,5 +66,16 @@ export async function POST(request: Request) {
     data: { password: hash, mustChangePassword: false },
   });
 
-  return NextResponse.json({ ok: true, redirectToLogin: true });
+  const sid = await getSessionIdFromCookie();
+  let csrfToken: string | undefined;
+  if (sid) {
+    csrfToken = generateCsrfToken();
+    await updateSession(sid, { ...auth.session, csrfToken });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    redirectToLogin: true,
+    ...(csrfToken && { csrfToken }),
+  });
 }

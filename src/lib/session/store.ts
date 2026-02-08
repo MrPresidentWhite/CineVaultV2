@@ -25,9 +25,13 @@ function normalizeIpAddress(ip: string | null | undefined): string | undefined {
 
 export type SessionData = {
   userId?: number;
+  /** Effektive Rolle (viewAsRole oder user.role); für Proxy-Zugriffskontrolle. */
+  effectiveRole?: string;
   viewAsRole?: string;
   rememberMe?: boolean;
   cookie?: { maxAge?: number };
+  /** CSRF-Token für sensible Formulare (Passwort, 2FA, E-Mail). */
+  csrfToken?: string;
   [key: string]: unknown;
 };
 

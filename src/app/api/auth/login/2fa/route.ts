@@ -8,7 +8,13 @@ import {
   getSessionCookieOptions,
   SESSION_COOKIE_NAME,
 } from "@/lib/session";
-import { ROLE_COOKIE_NAME } from "@/lib/session/config";
+import {
+  checkLoginRateLimit,
+  getClientIp,
+  recordLoginFailure,
+  isUserLockedUntil,
+  isRequestFromTrustedDevice,
+} from "@/lib/login-rate-limit";
 import {
   PENDING_2FA_COOKIE_NAME,
   TRUST_COOKIE_NAME,
@@ -17,9 +23,13 @@ import {
   verifyTotpToken,
   hashBackupCode,
 } from "@/lib/two-factor";
-import { getPublicOrigin } from "@/lib/request-url";
+import { getPublicOrigin, getSafeCallbackPath } from "@/lib/request-url";
 
 const TRUST_DAYS = 30;
+const RATE_LIMIT_MSG =
+  "Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen.";
+const LOCKED_UNTIL_MSG =
+  "Konto vorübergehend gesperrt (zu viele Fehlversuche). Bitte später erneut.";
 const TRUST_MAX_AGE_SEC = TRUST_DAYS * 24 * 60 * 60;
 
 function hashTrustToken(token: string): string {
@@ -83,11 +93,26 @@ export async function POST(request: Request) {
     );
   }
 
+  const ip = getClientIp(request);
+  const identifier = `user:${payload.userId}`;
+  const rateLimit = await checkLoginRateLimit(ip, identifier);
+  if (!rateLimit.allowed) {
+    return NextResponse.redirect(
+      new URL(
+        `login/2fa?error=${encodeURIComponent(RATE_LIMIT_MSG)}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
+      ),
+      { status: 302 }
+    );
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: {
       id: true,
       role: true,
+      locked: true,
+      lockedUntil: true,
       totpSecretEncrypted: true,
       totpEnabledAt: true,
       isMasterAdmin: true,
@@ -98,6 +123,29 @@ export async function POST(request: Request) {
     const res = NextResponse.redirect(new URL("login?error=" + encodeURIComponent("2FA nicht aktiv."), base), {
       status: 302,
     });
+    res.cookies.delete(PENDING_2FA_COOKIE_NAME);
+    return res;
+  }
+
+  if (user.locked) {
+    const res = NextResponse.redirect(
+      new URL(
+        `login/2fa?error=${encodeURIComponent("Konto ist gesperrt.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
+      ),
+      { status: 302 }
+    );
+    res.cookies.delete(PENDING_2FA_COOKIE_NAME);
+    return res;
+  }
+  if (isUserLockedUntil(user)) {
+    const res = NextResponse.redirect(
+      new URL(
+        `login/2fa?error=${encodeURIComponent(LOCKED_UNTIL_MSG)}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        base
+      ),
+      { status: 302 }
+    );
     res.cookies.delete(PENDING_2FA_COOKIE_NAME);
     return res;
   }
@@ -121,6 +169,11 @@ export async function POST(request: Request) {
   }
 
   if (!codeValid) {
+    const trustCookie = cookieStore.get(TRUST_COOKIE_NAME)?.value;
+    const fromTrustedDevice = await isRequestFromTrustedDevice(user.id, trustCookie ?? null);
+    if (!fromTrustedDevice) {
+      await recordLoginFailure(ip, identifier, "TWO_FA");
+    }
     return NextResponse.redirect(
       new URL(
         `login/2fa?error=${encodeURIComponent("Code ungültig oder bereits verwendet.")}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
@@ -130,8 +183,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const effectiveRole = (user as { isMasterAdmin?: boolean }).isMasterAdmin === true ? "ADMIN" : user.role;
+
   const { sid } = await createSession(
-    { userId: user.id, rememberMe: true },
+    { userId: user.id, rememberMe: true, effectiveRole },
     {
       ipAddress: request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? null,
       userAgent: request.headers.get("user-agent") ?? null,
@@ -139,18 +194,11 @@ export async function POST(request: Request) {
   );
 
   const opts = getSessionCookieOptions();
-  const response = NextResponse.redirect(new URL(callbackUrl, base), { status: 302 });
+  const safePath = getSafeCallbackPath(callbackUrl, base);
+  const response = NextResponse.redirect(new URL(safePath, base), { status: 302 });
 
   response.cookies.set(SESSION_COOKIE_NAME, sid, {
     httpOnly: opts.httpOnly,
-    secure: opts.secure,
-    sameSite: opts.sameSite,
-    maxAge: opts.maxAge,
-    path: opts.path,
-  });
-  const effectiveRole = (user as { isMasterAdmin?: boolean }).isMasterAdmin === true ? "ADMIN" : user.role;
-  response.cookies.set(ROLE_COOKIE_NAME, effectiveRole, {
-    httpOnly: false,
     secure: opts.secure,
     sameSite: opts.sameSite,
     maxAge: opts.maxAge,

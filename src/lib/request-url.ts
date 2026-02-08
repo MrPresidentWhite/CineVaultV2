@@ -39,3 +39,30 @@ export function getPublicUrl(request: Request, path: string): string {
   const p = path.startsWith("/") ? path.slice(1) : path;
   return `${base}${p}`;
 }
+
+/**
+ * Reduziert callbackUrl auf einen sicheren Redirect-Pfad (Same-Origin).
+ * Verhindert Open Redirect (Security-Report v2 §5 / Empfehlung 2): nur Pfade unter der eigenen Origin;
+ * absolute URLs (http/https) werden abgelehnt.
+ * @param callbackUrl vom Client übergebener Wert (z. B. aus Form/Query)
+ * @param baseUrlWithSlash öffentliche Origin mit trailing slash (z. B. getPublicOrigin(request) + "/")
+ * @returns sicherer Pfad (z. B. "/" oder "/dashboard") – bei fremder/absoluter URL immer "/"
+ */
+export function getSafeCallbackPath(
+  callbackUrl: string,
+  baseUrlWithSlash: string
+): string {
+  const trimmed = (callbackUrl ?? "").trim() || "/";
+  if (trimmed === "/") return "/";
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith("http://") || lower.startsWith("https://")) return "/";
+  try {
+    const resolved = new URL(trimmed, baseUrlWithSlash);
+    const allowedOrigin = new URL(baseUrlWithSlash).origin;
+    if (resolved.origin !== allowedOrigin) return "/";
+    const path = resolved.pathname + resolved.search;
+    return path || "/";
+  } catch {
+    return "/";
+  }
+}

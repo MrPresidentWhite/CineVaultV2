@@ -33,7 +33,10 @@ export async function getAuth(meta?: {
   });
   if (!user || user.locked) return null;
 
-  const effectiveRole = (session.viewAsRole as Role) ?? user.role;
+  const effectiveRole =
+    (session.effectiveRole as Role) ??
+    (session.viewAsRole as Role) ??
+    user.role;
 
   return { user, session, effectiveRole };
 }

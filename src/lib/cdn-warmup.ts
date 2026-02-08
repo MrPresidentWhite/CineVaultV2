@@ -2,7 +2,7 @@
  * CDN-Warmup-Job: Lädt die neuesten Poster/Backdrops/Cover/Stills per GET,
  * damit Cloudflare sie am Edge cacht → schnellere Ladezeiten.
  *
- * Wird z. B. per Cron (GET /api/cron/cdn-warmup) oder manuell aufgerufen.
+ * Wird per node-cron (instrumentation) oder manuell aufgerufen.
  * Nutzt WARMUP_* aus der Umgebung als Defaults.
  *
  * Optimierungen:

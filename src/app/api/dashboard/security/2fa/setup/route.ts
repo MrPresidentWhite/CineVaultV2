@@ -8,6 +8,7 @@ import {
   getTotpKeyUri,
   encryptTotpSecret,
 } from "@/lib/two-factor";
+import { getCsrfTokenFromRequest, requireCsrf, generateCsrfToken } from "@/lib/csrf";
 import QRCode from "qrcode";
 
 const TOTP_ISSUER = "CineVault";
@@ -17,10 +18,16 @@ const TOTP_ISSUER = "CineVault";
  * Startet 2FA-Setup: generiert Secret, speichert verschlüsselt in Session, liefert QR-Data-URL + manuellen Key.
  * Erfordert eingeloggt + EDITOR. User darf noch keine 2FA aktiv haben.
  */
-export async function POST() {
+export async function POST(request: Request) {
   const auth = await getAuth();
   if (!auth || !hasEffectiveRole(auth, RoleEnum.EDITOR)) {
     return NextResponse.json({ ok: false, error: "Nicht berechtigt" }, { status: 403 });
+  }
+
+  const csrfToken = getCsrfTokenFromRequest(request);
+  const csrfError = requireCsrf(auth.session, csrfToken);
+  if (csrfError) {
+    return NextResponse.json({ ok: false, error: csrfError }, { status: 403 });
   }
 
   const user = auth.user;
@@ -41,9 +48,11 @@ export async function POST() {
 
   const secret = generateTotpSecret();
   const encrypted = encryptTotpSecret(secret);
+  const newCsrfToken = generateCsrfToken();
   await updateSession(sid, {
     ...auth.session,
     pendingTotpSecret: encrypted,
+    csrfToken: newCsrfToken,
   });
 
   const otpauthUri = getTotpKeyUri(secret, user.email, TOTP_ISSUER);
@@ -56,5 +65,6 @@ export async function POST() {
     ok: true,
     qrDataUrl,
     manualKey: secret,
+    csrfToken: newCsrfToken,
   });
 }

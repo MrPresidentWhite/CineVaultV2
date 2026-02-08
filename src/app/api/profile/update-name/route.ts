@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getSessionIdFromCookie, updateSession } from "@/lib/session";
+import { getCsrfTokenFromRequest, requireCsrf, generateCsrfToken } from "@/lib/csrf";
 
 const MIN_NAME_LENGTH = 2;
 
@@ -17,6 +19,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Ungültiges JSON" }, { status: 400 });
   }
 
+  const csrfToken = getCsrfTokenFromRequest(request, body);
+  const csrfError = requireCsrf(auth.session, csrfToken);
+  if (csrfError) {
+    return NextResponse.json({ ok: false, error: csrfError }, { status: 403 });
+  }
+
   const name = String(body.name ?? "").trim();
   if (name.length < MIN_NAME_LENGTH) {
     return NextResponse.json(
@@ -30,5 +38,15 @@ export async function POST(request: Request) {
     data: { name },
   });
 
-  return NextResponse.json({ ok: true });
+  const sid = await getSessionIdFromCookie();
+  let csrfToken: string | undefined;
+  if (sid) {
+    csrfToken = generateCsrfToken();
+    await updateSession(sid, { ...auth.session, csrfToken });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    ...(csrfToken && { csrfToken }),
+  });
 }

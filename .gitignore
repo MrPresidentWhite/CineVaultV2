@@ -29,6 +29,12 @@ scripts/requirements-api-test.txt
 *.pem
 .secrets/
 
+# Staging-CI-Artefakte (lokal/CI)
+logging-check.txt
+lint.txt
+test.txt
+build.txt
+
 # debug
 npm-debug.log*
 yarn-debug.log*

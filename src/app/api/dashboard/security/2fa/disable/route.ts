@@ -9,6 +9,8 @@ import {
   verifyTotpToken,
   hashBackupCode,
 } from "@/lib/two-factor";
+import { getSessionIdFromCookie, updateSession } from "@/lib/session";
+import { getCsrfTokenFromRequest, requireCsrf, generateCsrfToken } from "@/lib/csrf";
 
 /**
  * POST /api/dashboard/security/2fa/disable
@@ -21,6 +23,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Nicht berechtigt" }, { status: 403 });
   }
 
+  let body: { password?: string; code?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Ungültiger Body" }, { status: 400 });
+  }
+
+  const csrfToken = getCsrfTokenFromRequest(request, body);
+  const csrfError = requireCsrf(auth.session, csrfToken);
+  if (csrfError) {
+    return NextResponse.json({ ok: false, error: csrfError }, { status: 403 });
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: auth.user.id },
     select: { password: true, totpSecretEncrypted: true, totpEnabledAt: true },
@@ -31,13 +46,6 @@ export async function POST(request: Request) {
       { ok: false, error: "2FA ist nicht aktiviert." },
       { status: 400 }
     );
-  }
-
-  let body: { password?: string; code?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Ungültiger Body" }, { status: 400 });
   }
 
   const password = typeof body.password === "string" ? body.password : "";
@@ -93,5 +101,15 @@ export async function POST(request: Request) {
     prisma.trustedDevice.deleteMany({ where: { userId: auth.user.id } }),
   ]);
 
-  return NextResponse.json({ ok: true });
+  const sid = await getSessionIdFromCookie();
+  let csrfToken: string | undefined;
+  if (sid) {
+    csrfToken = generateCsrfToken();
+    await updateSession(sid, { ...auth.session, csrfToken });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    ...(csrfToken && { csrfToken }),
+  });
 }

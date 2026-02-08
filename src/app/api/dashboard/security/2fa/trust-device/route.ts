@@ -5,7 +5,9 @@ import { prisma } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
+import { getSessionIdFromCookie, updateSession } from "@/lib/session";
 import { TRUST_COOKIE_NAME } from "@/lib/two-factor";
+import { getCsrfTokenFromRequest, requireCsrf, generateCsrfToken } from "@/lib/csrf";
 
 const TRUST_DAYS = 30;
 const TRUST_MAX_AGE_SEC = TRUST_DAYS * 24 * 60 * 60;
@@ -23,6 +25,12 @@ export async function POST(request: Request) {
   const auth = await getAuth();
   if (!auth || !hasEffectiveRole(auth, RoleEnum.EDITOR)) {
     return NextResponse.json({ ok: false, error: "Nicht berechtigt" }, { status: 403 });
+  }
+
+  const csrfToken = getCsrfTokenFromRequest(request);
+  const csrfError = requireCsrf(auth.session, csrfToken);
+  if (csrfError) {
+    return NextResponse.json({ ok: false, error: csrfError }, { status: 403 });
   }
 
   const user = await prisma.user.findUnique({
@@ -50,7 +58,17 @@ export async function POST(request: Request) {
     },
   });
 
-  const response = NextResponse.json({ ok: true });
+  const sid = await getSessionIdFromCookie();
+  let csrfToken: string | undefined;
+  if (sid) {
+    csrfToken = generateCsrfToken();
+    await updateSession(sid, { ...auth.session, csrfToken });
+  }
+
+  const response = NextResponse.json({
+    ok: true,
+    ...(csrfToken && { csrfToken }),
+  });
   response.cookies.set(TRUST_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

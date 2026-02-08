@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getPublicOrigin } from "@/lib/request-url";
+import { getPublicOrigin, getSafeCallbackPath } from "@/lib/request-url";
 import {
   createSession,
   getSessionCookieOptions,
   SESSION_COOKIE_NAME,
 } from "@/lib/session";
-import { ROLE_COOKIE_NAME } from "@/lib/session/config";
 import { isDev } from "@/lib/env";
 
 /**
@@ -51,7 +50,7 @@ export async function GET(request: Request) {
   }
 
   const { sid } = await createSession(
-    { userId: masterAdmin.id, rememberMe: true },
+    { userId: masterAdmin.id, rememberMe: true, effectiveRole: "ADMIN" },
     {
       ipAddress: request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? null,
       userAgent: request.headers.get("user-agent") ?? null,
@@ -59,18 +58,12 @@ export async function GET(request: Request) {
   );
 
   const opts = getSessionCookieOptions();
-  const response = NextResponse.redirect(new URL(callbackUrl, base), {
+  const safePath = getSafeCallbackPath(callbackUrl, base);
+  const response = NextResponse.redirect(new URL(safePath, base), {
     status: 302,
   });
   response.cookies.set(SESSION_COOKIE_NAME, sid, {
     httpOnly: opts.httpOnly,
-    secure: opts.secure,
-    sameSite: opts.sameSite,
-    maxAge: opts.maxAge,
-    path: opts.path,
-  });
-  response.cookies.set(ROLE_COOKIE_NAME, "ADMIN", {
-    httpOnly: false,
     secure: opts.secure,
     sameSite: opts.sameSite,
     maxAge: opts.maxAge,

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getCsrfToken, csrfHeaders, setCsrfToken } from "@/lib/csrf-client";
 
 type Props = { forced: boolean };
 
@@ -21,9 +22,10 @@ export function DashboardAccountForm({ forced }: Props) {
 
     setLoading(true);
     try {
+      const token = await getCsrfToken();
       const res = await fetch("/api/account/change-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...csrfHeaders(token), "Content-Type": "application/json" },
         body: JSON.stringify({
           currentPassword: forced ? undefined : currentPassword,
           newPassword,
@@ -31,6 +33,7 @@ export function DashboardAccountForm({ forced }: Props) {
         }),
       });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (data.ok && data.redirectToLogin) {
         window.location.href = "/login?changed=1";
         return;

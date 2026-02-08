@@ -10,7 +10,6 @@ const ALLOWED_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
-  "image/svg+xml",
   "image/avif",
 ];
 
@@ -44,12 +43,18 @@ export async function POST(request: Request) {
 
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json(
-      { ok: false, error: "Ungültiges Format (nur JPEG, PNG, WebP, GIF, SVG, AVIF)" },
+      { ok: false, error: "Ungültiges Format (nur JPEG, PNG, WebP, GIF, AVIF)" },
       { status: 400 }
     );
   }
 
   const ext = extname(file.name || ".jpg").slice(1).toLowerCase() || "jpg";
+  if (ext === "svg") {
+    return NextResponse.json(
+      { ok: false, error: "SVG/XML-Formate sind nicht erlaubt" },
+      { status: 400 }
+    );
+  }
   const buffer = Buffer.from(await file.arrayBuffer());
 
   try {

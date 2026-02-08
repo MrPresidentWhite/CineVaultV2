@@ -1,0 +1,49 @@
+# Security Report: npm audit + Tests → Grok (KI-Einschätzung) → Discord Webhook
+# Läuft per Schedule (wöchentlich) und manuell (workflow_dispatch).
+# Secrets: GROK_API_MODEL, GROK_API_KEY, GROK_API_URL, DISCORD_SECURITY_WEBHOOK
+
+name: Security Report
+
+on:
+  schedule:
+    # Mo 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  security-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          npm audit --json > audit.json 2>&1 || true
+          echo "audit_done=1" >> $GITHUB_OUTPUT
+
+      - name: Run tests
+        id: tests
+        run: |
+          npm test 2>&1 | tee test-output.txt || true
+          echo "test_done=1" >> $GITHUB_OUTPUT
+
+      - name: Send report to Discord (with Grok summary)
+        env:
+          GROK_API_URL: ${{ secrets.GROK_API_URL }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          GROK_API_MODEL: ${{ secrets.GROK_API_MODEL }}
+          DISCORD_SECURITY_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
+        run: node scripts/security-report-discord.mjs audit.json test-output.txt

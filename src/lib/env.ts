@@ -51,12 +51,27 @@ export const isDev = ["dev", "development", "developement"].includes(
   (getEnv("ENVIRONMENT") ?? "prod").toLowerCase()
 );
 
-/** Geheimer Schlüssel für Session-Cookie (in Produktion setzen). */
-export const SESSION_SECRET =
-  getEnv("SESSION_SECRET") ?? "change-me-in-production-please";
+const SESSION_SECRET_DEFAULT = "change-me-in-production-please";
 
-/** Secret für Cron-Endpoints (z. B. Session-Cleanup). Vercel setzt es beim Cron-Aufruf als Bearer-Token. */
-export const CRON_SECRET = getEnv("CRON_SECRET");
+/**
+ * Liefert den Session-Secret: in Dev SESSION_SECRET_DEV ?? SESSION_SECRET ?? Default,
+ * in Prod nur SESSION_SECRET – und wirft, wenn fehlend oder Default (Prod muss eigenen Secret setzen).
+ */
+function getSessionSecret(): string {
+  if (isDev) {
+    return getEnv("SESSION_SECRET_DEV") ?? getEnv("SESSION_SECRET") ?? SESSION_SECRET_DEFAULT;
+  }
+  const v = getEnv("SESSION_SECRET");
+  if (v === undefined || v === "" || v === SESSION_SECRET_DEFAULT) {
+    throw new Error(
+      "In Produktion muss SESSION_SECRET gesetzt und ein starker, eindeutiger Wert sein (nicht den Default verwenden)."
+    );
+  }
+  return v;
+}
+
+/** Geheimer Schlüssel für Session/2FA/API-Key-Crypto. Dev: SESSION_SECRET_DEV oder SESSION_SECRET; Prod: nur SESSION_SECRET (Pflicht). */
+export const SESSION_SECRET = getSessionSecret();
 
 /** Redis-URL für Session/Cache. Aus REDIS_URL oder aus REDIS_HOST/REDIS_PASS/REDIS_PORT gebaut. */
 export const REDIS_URL =

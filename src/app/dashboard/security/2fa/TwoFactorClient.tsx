@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getCsrfToken, csrfHeaders, setCsrfToken } from "@/lib/csrf-client";
 
 type Props = { initialEnabled: boolean };
 
@@ -42,8 +43,13 @@ export function TwoFactorClient({ initialEnabled }: Props) {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/dashboard/security/2fa/setup", { method: "POST" });
+      const token = await getCsrfToken();
+      const res = await fetch("/api/dashboard/security/2fa/setup", {
+        method: "POST",
+        headers: csrfHeaders(token),
+      });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (!res.ok) {
         setError(data.error ?? "Setup fehlgeschlagen.");
         return;
@@ -63,12 +69,14 @@ export function TwoFactorClient({ initialEnabled }: Props) {
     setError(null);
     setLoading(true);
     try {
+      const token = await getCsrfToken();
       const res = await fetch("/api/dashboard/security/2fa/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...csrfHeaders(token), "Content-Type": "application/json" },
         body: JSON.stringify({ code: code.replace(/\s/g, "") }),
       });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (!res.ok) {
         setError(data.error ?? "Verifizierung fehlgeschlagen.");
         return;
@@ -101,8 +109,13 @@ export function TwoFactorClient({ initialEnabled }: Props) {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/dashboard/security/2fa/trust-device", { method: "POST" });
+      const token = await getCsrfToken();
+      const res = await fetch("/api/dashboard/security/2fa/trust-device", {
+        method: "POST",
+        headers: csrfHeaders(token),
+      });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (!res.ok) {
         setError(data.error ?? "Fehler.");
         return;
@@ -120,15 +133,17 @@ export function TwoFactorClient({ initialEnabled }: Props) {
     setError(null);
     setLoading(true);
     try {
+      const token = await getCsrfToken();
       const res = await fetch("/api/dashboard/security/2fa/disable", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...csrfHeaders(token), "Content-Type": "application/json" },
         body: JSON.stringify({
           password: disablePassword,
           code: disableCode.replace(/\s/g, ""),
         }),
       });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (!res.ok) {
         setError(data.error ?? "Deaktivierung fehlgeschlagen.");
         return;

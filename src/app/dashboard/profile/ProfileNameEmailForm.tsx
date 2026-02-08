@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getCsrfToken, csrfHeaders, setCsrfToken } from "@/lib/csrf-client";
 
 type Props = {
   initialName: string;
@@ -22,12 +23,14 @@ export function ProfileNameEmailForm({ initialName, initialEmail }: Props) {
     setNameError(null);
     setNameStatus("loading");
     try {
+      const token = await getCsrfToken();
       const res = await fetch("/api/profile/update-name", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...csrfHeaders(token), "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
       });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (data.ok) {
         setNameStatus("ok");
         router.refresh();
@@ -47,12 +50,14 @@ export function ProfileNameEmailForm({ initialName, initialEmail }: Props) {
     setEmailError(null);
     setEmailStatus("loading");
     try {
+      const token = await getCsrfToken();
       const res = await fetch("/api/profile/update-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...csrfHeaders(token), "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
       const data = await res.json();
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       if (data.ok) {
         setEmailStatus("ok");
         router.refresh();

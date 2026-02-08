@@ -71,6 +71,11 @@ export default async function DashboardLayout({
             icon: "👥",
           },
           {
+            href: "/dashboard/admin/security",
+            label: "Security-Report",
+            icon: "🛡️",
+          },
+          {
             href: "/dashboard/admin/bulk-refetch",
             label: "Bulk Refetch (Meta & Bilder)",
             icon: "🔄",
