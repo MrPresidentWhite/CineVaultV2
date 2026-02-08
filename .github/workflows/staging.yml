@@ -11,6 +11,10 @@ on:
 jobs:
   staging:
     runs-on: ubuntu-latest
+    env:
+      # Nur für CI-Build: src/lib/env.ts verlangt in Prod ein gesetztes SESSION_SECRET.
+      # Echte Prod nutzt das Secret aus der Server-.env; hier reicht ein Platzhalter.
+      SESSION_SECRET: "ci-build-placeholder-not-used-at-runtime"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
