@@ -6,6 +6,7 @@
 import type { DeviceType } from "./device";
 
 // platform ist CJS: exportiert ein Objekt mit .parse(ua)
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS-only package
 const platform = require("platform") as { parse: (ua?: string) => { name?: string; version?: string; os?: { family?: string }; product?: string } };
 
 export type ParsedDevice = {

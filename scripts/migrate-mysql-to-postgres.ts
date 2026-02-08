@@ -39,7 +39,6 @@ function extractInsertStatements(content: string): Map<string, string> {
   const map = new Map<string, string>();
   const regex = /INSERT INTO `([^`]+)`\s*\(([^)]+)\)\s*VALUES\s/gi;
   let m: RegExpExecArray | null;
-  let lastEnd = 0;
 
   while ((m = regex.exec(content)) !== null) {
     const tableName = m[1];

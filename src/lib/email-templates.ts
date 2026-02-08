@@ -1,6 +1,7 @@
 /**
- * E-Mail-HTML-Templates (inline CSS, Design wie App).
+ * E-Mail-HTML-Templates (inline CSS, tabellenbasiertes Layout für maximale Mail-Client-Kompatibilität).
  * Kein EJS – reine TS-Funktionen für bessere Typen und Wartung.
+ * Alle Bild-URLs müssen absolut sein (publicUrl mit APP_URL/R2_PUBLIC_BASE_URL).
  */
 
 import { format } from "date-fns";
@@ -90,22 +91,23 @@ function renderMovieCard(
   const accent = s.movie.accentColor || styles.gold;
   const posterSrc = s.movie.posterUrl ? publicUrl(s.movie.posterUrl) : "";
   const hasPoster = Boolean(posterSrc);
-  const posterHtml = hasPoster
-    ? `<div class="movie-poster"><img src="${esc(posterSrc)}" alt="${esc(s.movie.title)}" width="140" style="width:100%;height:210px;object-fit:cover;display:block;border-radius:8px;"></div>`
-    : "";
-  const gridCols = hasPoster ? "min(140px,30vw) 1fr" : "1fr";
   const fromLabel = fromLabelForEmail(s);
+  const posterCell = hasPoster
+    ? `<td width="140" valign="top" style="padding:0 16px 0 0;vertical-align:top;"><img src="${esc(posterSrc)}" alt="${esc(s.movie.title)}" width="140" height="210" style="display:block;width:140px;height:210px;border:0;border-radius:8px;background:${styles.ring};" /></td>`
+    : "";
+  const bodyCell = `<td valign="top" style="padding:16px;vertical-align:top;">
+    <div style="font-size:18px;font-weight:600;color:${styles.gold};margin-bottom:8px;">${esc(s.movie.title)} <span style="font-size:14px;color:#aaa;">(${s.movie.releaseYear})</span></div>
+    <div style="font-size:14px;margin:10px 0;padding:10px;background:${styles.goldBg};border-radius:8px;color:${styles.text};">
+      ${esc(s.firstTime)} <strong style="color:${styles.gold}">„${esc(fromLabel)}"</strong> → ${esc(s.lastTime)} <strong style="color:${styles.gold}">„${esc(statusLabel(s.to))}"</strong>
+    </div>
+    <a href="${esc(appUrl)}/movies/${String(s.movie.id)}" style="display:inline-block;padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;margin-top:12px;background:${accent};color:#000;text-decoration:none;">Zur Detailseite</a>
+  </td>`;
   return `
-    <div class="movie-card" style="background:${styles.panel};border:1px solid ${styles.ring};border-radius:12px;overflow:hidden;margin-bottom:20px;display:grid;grid-template-columns:${gridCols};gap:16px;align-items:start;">
-      ${posterHtml}
-      <div class="movie-body" style="padding:16px;min-width:0;">
-        <div class="movie-title" style="font-size:18px;font-weight:600;color:${styles.gold};margin-bottom:8px;">${esc(s.movie.title)} <span style="font-size:14px;color:#aaa;">(${s.movie.releaseYear})</span></div>
-        <div class="change-line" style="font-size:14px;margin:10px 0;padding:10px;background:${styles.goldBg};border-radius:8px;color:${styles.text};">
-          ${esc(s.firstTime)} <strong style="color:${styles.gold}">„${esc(fromLabel)}"</strong> → ${esc(s.lastTime)} <strong style="color:${styles.gold}">„${esc(statusLabel(s.to))}"</strong>
-        </div>
-        <a href="${esc(appUrl)}/movies/${String(s.movie.id)}" class="btn" style="display:inline-block;padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;margin-top:12px;background:${accent};color:#000;text-decoration:none;">Zur Detailseite</a>
-      </div>
-    </div>`;
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${styles.panel};border:1px solid ${styles.ring};border-radius:12px;margin-bottom:20px;">
+      <tr><td style="padding:0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>${posterCell}${bodyCell}</tr></table>
+      </td></tr>
+    </table>`;
 }
 
 export function renderMovieNotificationHtml(
@@ -116,6 +118,9 @@ export function renderMovieNotificationHtml(
 ): string {
   const userName = user.name?.trim() || user.email;
   const logoUrl = publicUrl("uploads/assets/logo-big.svg");
+  const logoHtml = logoUrl
+    ? `<img src="${esc(logoUrl)}" alt="CineVault" width="52" height="52" style="display:block;width:52px;height:52px;margin:0 auto 10px;border:0;border-radius:8px;" />`
+    : `<span style="font-size:20px;font-weight:700;color:${styles.gold};">CineVault</span>`;
 
   const byStatus = summaries.reduce<Record<string, DigestSummary[]>>((acc, s) => {
     const status = String(s.finalStatus);
@@ -158,25 +163,34 @@ export function renderMovieNotificationHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting" content="yes">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>CineVault – ${summaries.length} ${summaries.length === 1 ? "Film" : "Filme"} geändert</title>
 </head>
-<body style="margin:0;padding:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:${styles.bg};color:${styles.text};line-height:1.5;font-size:15px;">
-  <div class="container" style="max-width:660px;margin:0 auto;padding:16px;background:${styles.bg};">
-    <div class="header" style="text-align:center;margin-bottom:28px;">
-      <img src="${esc(logoUrl)}" alt="CineVault" width="52" height="52" style="height:52px;width:auto;margin:0 auto 10px;display:block;border-radius:8px;">
-      <small style="color:${styles.textDim};font-size:13px;">Film-Status Update</small>
-    </div>
-    <h2 style="font-size:19px;margin:20px 0 12px;color:${styles.text};font-weight:600;">Hallo ${esc(userName)},</h2>
-    <p style="margin:10px 0;font-size:14px;color:${styles.textMuted};">Hier die wichtigsten Statusänderungen der letzten 12 Stunden, nach Status sortiert:</p>
-    ${categorySummaryLines ? `<p style="margin:12px 0 20px 0;font-size:14px;color:${styles.textMuted};line-height:1.6;">${categorySummaryLines}</p>` : ""}
-    <div class="movie-list" style="margin:24px 0;">
-      ${categorySections}
-    </div>
-    <div class="footer" style="margin-top:36px;padding-top:20px;border-top:1px solid ${styles.ring};font-size:12px;color:#777;text-align:center;">
-      <p style="margin:0 0 8px;">Du kannst diese Benachrichtigungen in deinem Profil deaktivieren.</p>
-      <p style="margin:0;"><small>© CineVault – automatische Benachrichtigung</small></p>
-    </div>
-  </div>
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:${styles.bg};color:${styles.text};line-height:1.5;font-size:15px;-webkit-text-size-adjust:100%;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${styles.bg};">
+    <tr><td align="center" style="padding:16px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="660" style="max-width:660px;">
+        <tr><td style="text-align:center;padding-bottom:28px;">
+          ${logoHtml}
+          <span style="color:${styles.textDim};font-size:13px;">Film-Status Update</span>
+        </td></tr>
+        <tr><td style="padding:0 0 12px 0;">
+          <h2 style="font-size:19px;margin:0 0 12px 0;color:${styles.text};font-weight:600;">Hallo ${esc(userName)},</h2>
+          <p style="margin:10px 0;font-size:14px;color:${styles.textMuted};">Hier die wichtigsten Statusänderungen der letzten 12 Stunden, nach Status sortiert:</p>
+          ${categorySummaryLines ? `<p style="margin:12px 0 20px 0;font-size:14px;color:${styles.textMuted};line-height:1.6;">${categorySummaryLines}</p>` : ""}
+        </td></tr>
+        <tr><td style="padding:24px 0;">
+          ${categorySections}
+        </td></tr>
+        <tr><td style="padding-top:36px;border-top:1px solid ${styles.ring};font-size:12px;color:#777;text-align:center;">
+          <p style="margin:0 0 8px;">Du kannst diese Benachrichtigungen in deinem Profil deaktivieren.</p>
+          <p style="margin:0;">© CineVault – automatische Benachrichtigung</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }

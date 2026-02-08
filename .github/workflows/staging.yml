@@ -11,6 +11,9 @@ on:
 jobs:
   staging:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     env:
       # Nur für CI-Build: src/lib/env.ts verlangt in Prod SESSION_SECRET und getDatabaseUrl() DB-Config.
       # Echte Prod nutzt Secrets aus der Server-.env; hier reichen Platzhalter (kein echter DB-Zugriff).
@@ -59,7 +62,27 @@ jobs:
         continue-on-error: true
         run: node scripts/staging-logging-check.mjs logging-check.txt || exit 1
 
-      - name: Staging-Report an Discord (mit Grok)
+      - name: Job-Logs herunterladen (für Discord-Anhang)
+        if: always()
+        run: |
+          mkdir -p _joblogs && cd _joblogs
+          JOB_ID=$(curl -sS -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
+            | jq -r '.jobs[] | select(.name == env.GITHUB_JOB) | .id')
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
+            echo "Job-ID nicht gefunden." > staging-job-logs.txt
+          else
+            curl -sSL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/jobs/${JOB_ID}/logs" -o logs.zip
+            if [ -f logs.zip ] && [ -s logs.zip ]; then
+              unzip -o -q logs.zip || true
+              ls -1 *.txt 2>/dev/null | sort -V | xargs cat > staging-job-logs.txt 2>/dev/null || true
+            fi
+          fi
+          [ -s staging-job-logs.txt ] || echo "Keine Logs verfügbar." > staging-job-logs.txt
+          mv staging-job-logs.txt .. && cd .. && rm -rf _joblogs
+
+      - name: Staging-Report an Discord (mit Grok + Log-Anhang)
         if: always()
         env:
           LINT_OUTCOME: ${{ steps.lint.outcome }}
@@ -70,7 +93,7 @@ jobs:
           GROK_API_URL: ${{ secrets.GROK_API_URL }}
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
           GROK_API_MODEL: ${{ secrets.GROK_API_MODEL }}
-        run: node scripts/staging-report-discord.mjs lint.txt test.txt build.txt logging-check.txt
+        run: node scripts/staging-report-discord.mjs lint.txt test.txt build.txt logging-check.txt staging-job-logs.txt
 
       - name: Staging fehlgeschlagen
         if: always() && (steps.lint.outcome == 'failure' || steps.test.outcome == 'failure' || steps.build.outcome == 'failure' || steps.logging-check.outcome == 'failure')

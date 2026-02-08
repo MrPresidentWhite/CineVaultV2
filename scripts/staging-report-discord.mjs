@@ -3,7 +3,8 @@
  * Staging Report → Grok (KI-Einschätzung) → Discord Webhook
  * Liest Lint-, Test- und Build-Ausgabe, baut Kurzfassung, holt Grok-Einschätzung, sendet Embed an DISCORD_STAGING_WEBHOOK.
  * Env: LINT_OUTCOME, TEST_OUTCOME, BUILD_OUTCOME, LOGGING_CHECK_OUTCOME, DISCORD_STAGING_WEBHOOK, GROK_API_*
- * Usage: node scripts/staging-report-discord.mjs [lint.txt] [test.txt] [build.txt] [logging-check.txt]
+ * Usage: node scripts/staging-report-discord.mjs [lint.txt] [test.txt] [build.txt] [logging-check.txt] [staging-job-logs.txt]
+ * Wenn das 5. Arg eine Log-Datei ist, wird sie als Anhang an Discord gesendet.
  */
 
 import { readFileSync, existsSync } from "fs";
@@ -12,6 +13,7 @@ const LINT_PATH = process.argv[2] || "lint.txt";
 const TEST_PATH = process.argv[3] || "test.txt";
 const BUILD_PATH = process.argv[4] || "build.txt";
 const LOGGING_CHECK_PATH = process.argv[5] || "logging-check.txt";
+const JOB_LOGS_PATH = process.argv[6] || "";
 
 function readTail(path, maxLines = 40) {
   if (!path || !existsSync(path)) return null;
@@ -205,17 +207,40 @@ function buildDiscordPayload(
   return { embeds: [embed] };
 }
 
-async function sendDiscord(payload) {
+/** Discord-Dateilimit für Webhook-Anhang (8 MB, unter 25 MB Limit). */
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+
+async function sendDiscord(payload, logFilePath) {
   const webhook = process.env.DISCORD_STAGING_WEBHOOK?.trim();
   if (!webhook) {
     console.error("DISCORD_STAGING_WEBHOOK nicht gesetzt.");
     process.exit(1);
   }
 
+  const hasAttachment = logFilePath && existsSync(logFilePath);
+  let body;
+  let headers = {};
+
+  if (hasAttachment) {
+    let logContent = readFileSync(logFilePath, "utf8");
+    if (Buffer.byteLength(logContent, "utf8") > MAX_ATTACHMENT_BYTES) {
+      const cut = "... [gekürzt, nur letzte 8 MB] ...\n\n";
+      logContent = cut + logContent.slice(-(MAX_ATTACHMENT_BYTES - Buffer.byteLength(cut, "utf8")));
+    }
+    const form = new FormData();
+    form.append("payload_json", JSON.stringify(payload));
+    form.append("file", new Blob([logContent], { type: "text/plain" }), "staging-job-logs.txt");
+    body = form;
+    // Content-Type mit Boundary setzt der Browser/Node bei FormData
+  } else {
+    body = JSON.stringify(payload);
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(webhook, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers,
+    body,
   });
 
   if (!res.ok) {
@@ -223,7 +248,7 @@ async function sendDiscord(payload) {
     console.error("Discord Webhook Fehler:", res.status, t.slice(0, 200));
     process.exit(1);
   }
-  console.log("Staging-Report an Discord gesendet.");
+  console.log("Staging-Report an Discord gesendet." + (hasAttachment ? " (Log-Datei angehängt)" : ""));
 }
 
 function readFull(path) {
@@ -276,7 +301,8 @@ async function main() {
     testResult,
     loggingCheckContent
   );
-  await sendDiscord(payload);
+  const attachLogs = !allPassed && (JOB_LOGS_PATH || "");
+  await sendDiscord(payload, attachLogs || undefined);
 }
 
 main().catch((e) => {

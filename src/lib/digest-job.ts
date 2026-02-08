@@ -30,10 +30,10 @@ const DISCORD_TITLES: Partial<
 
 function publicUrl(key: string): string {
   if (!key) return "";
-  if (key.startsWith("http://") || key.startsWith("https://")) return "";
-  const base = (R2_PUBLIC_BASE_URL ?? "").replace(/\/+$/, "");
+  if (key.startsWith("http://") || key.startsWith("https://")) return key;
+  const base = (R2_PUBLIC_BASE_URL || APP_URL || "").replace(/\/+$/, "");
   const path = key.replace(/^\/+/, "");
-  return base ? `${base}/${path}` : path || "";
+  return base ? `${base}/${path}` : "";
 }
 
 async function sendDiscordNotification(content: string, logLabel?: string): Promise<void> {

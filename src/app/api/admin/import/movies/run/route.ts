@@ -264,8 +264,9 @@ export async function POST(request: Request) {
               controller.close();
               return;
             }
-            const result = await importOneMovie(body as any, (p, msg) =>
-              send({ progress: p, message: msg })
+            const result = await importOneMovie(
+              body as { tmdbId: number; status?: string; priority?: string; mediaType?: string; quality?: string; assignedToUserId?: number; sizeBeforeBytes?: string; sizeAfterBytes?: string; videobusterUrl?: string },
+              (p, msg) => send({ progress: p, message: msg })
             );
             send({ step: "done", id: result.id, title: result.title });
           }
@@ -304,7 +305,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await importOneMovie(body as any);
+    const result = await importOneMovie(
+      body as { tmdbId: number; status?: string; priority?: string; mediaType?: string; quality?: string; assignedToUserId?: number; sizeBeforeBytes?: string; sizeAfterBytes?: string; videobusterUrl?: string }
+    );
     return NextResponse.json({ ok: true, id: result.id });
   } catch (e) {
     console.error("Import movies/run error:", e);

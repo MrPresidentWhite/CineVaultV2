@@ -17,8 +17,8 @@ export function FilterSection({
 
   useEffect(() => {
     const m = window.matchMedia("(min-width: 640px)");
-    if (!m.matches) setOpen(false);
     const handler = () => setOpen(m.matches);
+    queueMicrotask(() => setOpen(m.matches));
     m.addEventListener("change", handler);
     return () => m.removeEventListener("change", handler);
   }, []);
