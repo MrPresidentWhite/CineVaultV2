@@ -59,15 +59,15 @@ export async function POST(request: Request) {
   });
 
   const sid = await getSessionIdFromCookie();
-  let csrfToken: string | undefined;
+  let newCsrfToken: string | undefined;
   if (sid) {
-    csrfToken = generateCsrfToken();
-    await updateSession(sid, { ...auth.session, csrfToken });
+    newCsrfToken = generateCsrfToken();
+    await updateSession(sid, { ...auth.session, csrfToken: newCsrfToken });
   }
 
   const response = NextResponse.json({
     ok: true,
-    ...(csrfToken && { csrfToken }),
+    ...(newCsrfToken && { csrfToken: newCsrfToken }),
   });
   response.cookies.set(TRUST_COOKIE_NAME, token, {
     httpOnly: true,

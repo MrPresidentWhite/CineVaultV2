@@ -38,7 +38,6 @@ jobs:
 
       - name: Build
         id: build
-        continue-on-error: true
         run: npm run build 2>&1 | tee build.txt
 
       - name: Logging-Check (keine Secrets in Logs, v2 Abschnitt 15.3)
