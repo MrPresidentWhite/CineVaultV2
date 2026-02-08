@@ -38,13 +38,9 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
-/** Setzt Back-Nav-Cookies auf die Response (nur GET, document, nicht-ignorierte Pfade). */
+/** Setzt Back-Nav-Cookies auf die Response (alle GET zu Seiten-Pfaden, inkl. RSC bei Client-Navigation). */
 function applyBackNav(request: NextRequest, response: NextResponse): void {
-  const method = request.method;
-  const dest = request.headers.get("sec-fetch-dest") ?? "";
-  const accept = request.headers.get("accept") ?? "";
-  if (method !== "GET") return;
-  if (dest !== "document" && !accept.includes("text/html")) return;
+  if (request.method !== "GET") return;
 
   const pathname = request.nextUrl.pathname;
   const search = request.nextUrl.search;

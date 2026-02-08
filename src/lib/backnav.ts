@@ -108,14 +108,14 @@ export function isTrueBackNav(
 
 /**
  * Bevorzugte Back-Ziele je nach aktuellem Kontext (Reihenfolge = Priorität).
- * Collection-Detail: immer nur Home (Nutzer hat in der Collection die Filme zur Auswahl).
+ * Collection-Detail: zuerst Collection-Übersicht (mit Filtern), sonst Home.
  */
 function preferredBackTargetsFor(kind: RouteKind): RouteKind["type"][] {
   switch (kind.type) {
     case "movie":
       return ["collection", "list_movies", "home"];
     case "collection":
-      return ["home"];
+      return ["list_collections", "home"];
     case "series":
       return ["list_series", "home"];
     default:
@@ -144,7 +144,7 @@ export function computeBackFromStack(stack: string[], currentNormalized: string)
     case "list_movies":
       return "/movies";
     case "collection":
-      return "/";
+      return "/collections";
     case "list_collections":
       return "/collections";
     case "series":
@@ -171,7 +171,7 @@ export function updateStackAndGetBack(
 
   if (isTrueBackNav(current, refererNormalized, stack)) {
     stack.pop();
-    return stack[stack.length - 1] ?? "/";
+    return computeBackFromStack(stack, current);
   }
 
   if (last === current) {
