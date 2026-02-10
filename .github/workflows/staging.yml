@@ -1,5 +1,7 @@
 # Staging: Lint, Tests, Build → Staging-Report (Grok + Discord) → bei Erfolg wird Deploy getriggert
 # Läuft bei Push auf main. Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
+# "Abgebrochen" ohne Fehlermeldung: oft ein älterer Lauf, der durch concurrency abgebrochen wurde
+# (neuer Push = neuer Lauf, vorheriger wird cancelled). Im Actions-Tab den neuesten Lauf prüfen.
 # Secrets: DISCORD_STAGING_WEBHOOK, GROK_API_URL, GROK_API_KEY, GROK_API_MODEL
 
 name: Staging
@@ -8,13 +10,16 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: staging-main
+  cancel-in-progress: true
+
 jobs:
   staging:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
-      # write für actions/cache (Speichern des Caches)
+      # write für actions/cache (Speichern des Caches; inkl. Lesen)
       actions: write
     env:
       # Nur für CI-Build: src/lib/env.ts verlangt in Prod SESSION_SECRET und getDatabaseUrl() DB-Config.
