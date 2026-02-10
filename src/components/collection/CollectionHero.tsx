@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { CollectionDetail } from "@/lib/collection-data";
 import { CollectionHeroActions } from "./CollectionHeroActions";
 import { OverviewToggle } from "./OverviewToggle";
@@ -49,7 +50,7 @@ export function CollectionHero({
       <div className="collection-hero__content">
         <div className="collection-hero__poster">
           {collection.posterUrl ? (
-            <Image
+            <SkeletonImage
               src={collection.posterUrl}
               alt={collection.name}
               width={180}

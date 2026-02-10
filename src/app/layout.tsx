@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
+import { Header } from "@/components/Header";
+import { QuickActions } from "@/components/QuickActions";
 import { getAuth, hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
 import { toPublicUrl } from "@/lib/storage";
@@ -55,11 +57,15 @@ export default async function RootLayout({
   return (
     <html lang="de">
       <body
-        className={`${inter.variable} font-sans min-h-dvh bg-bg text-text antialiased`}
+        className={`${inter.variable} font-sans bg-bg text-text antialiased`}
       >
-        <AppShell user={userPayload} quickActionsItems={quickActionsItems}>
-          {children}
-        </AppShell>
+        <div className="flex h-dvh flex-col">
+          <Header user={userPayload} />
+          <div className="hidden md:block">
+            <QuickActions items={quickActionsItems} />
+          </div>
+          <AppShell>{children}</AppShell>
+        </div>
       </body>
     </html>
   );

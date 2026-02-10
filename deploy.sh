@@ -84,8 +84,12 @@ fi
 # --------------------------------------------------------------
 
 # ----------------- Install (mit dev für next build) -------------
-echo "[deploy] npm ci --include=dev..."
-"$NPM_BIN" ci --include=dev
+if $NEED_INSTALL; then
+  echo "[deploy] npm ci --include=dev..."
+  "$NPM_BIN" ci --include=dev
+else
+  echo "[deploy] npm ci (skip, node_modules unverändert)"
+fi
 # --------------------------------------------------------------
 
 # ----------------- Prisma ---------------------------------------
@@ -100,8 +104,13 @@ ${PRISMA_BIN} migrate deploy
 # --------------------------------------------------------------
 
 # ----------------- Next.js Build ---------------------------------
-echo "[deploy] clean .next (vermeidet Server-Action-Mismatch nach Deploy)"
-rm -rf .next
+# .next/cache erhalten für schnellere Rebuilds; Rest von .next löschen (vermeidet Server-Action-Mismatch)
+if [ -d .next ]; then
+  echo "[deploy] clean .next (behalte .next/cache)"
+  find .next -mindepth 1 -maxdepth 1 ! -name cache -exec rm -rf {} + 2>/dev/null || true
+else
+  echo "[deploy] .next neu"
+fi
 echo "[deploy] next build..."
 "$NPM_BIN" run -s build
 # --------------------------------------------------------------

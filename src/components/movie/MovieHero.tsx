@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { MovieDetail } from "@/lib/movie-data";
 import { MovieHeroActions } from "./MovieHeroActions";
 
@@ -49,7 +50,7 @@ export function MovieHero({ movie, backUrl, canEdit, canAdmin }: Props) {
       <div className="movie-hero__content">
         <div className="movie-hero__poster">
           {movie.posterUrl ? (
-            <Image
+            <SkeletonImage
               src={movie.posterUrl}
               alt={movie.title}
               width={180}

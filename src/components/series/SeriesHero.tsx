@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { SeriesDetail } from "@/lib/series-data";
 import { SeriesHeroActions } from "./SeriesHeroActions";
 
@@ -38,7 +39,7 @@ export function SeriesHero({ series, backUrl, canAdmin }: Props) {
       <div className="movie-hero__content">
         <div className="movie-hero__poster">
           {series.posterUrl ? (
-            <Image
+            <SkeletonImage
               src={series.posterUrl}
               alt={series.title}
               width={180}

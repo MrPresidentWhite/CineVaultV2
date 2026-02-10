@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRef, useEffect, useState } from "react";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 
 export type HeaderUser = {
   id: number;
@@ -51,11 +51,12 @@ export function UserMenu({ user }: { user: HeaderUser }) {
       >
         <span className="relative inline-block h-6 w-6 shrink-0 overflow-hidden rounded-full border border-[#2d2d2d] bg-[#949494] text-center text-[0.85rem] font-bold leading-6 text-white">
           {user.profileImageUrl ? (
-            <Image
+            <SkeletonImage
               src={user.profileImageUrl}
               alt={user.name}
               fill
               className="object-cover"
+              containerClassName="absolute inset-0"
               sizes="24px"
               unoptimized={user.profileImageUrl.startsWith("http")}
             />
@@ -85,11 +86,12 @@ export function UserMenu({ user }: { user: HeaderUser }) {
         <div className="mb-2 flex items-center gap-2.5 px-1 py-1">
           <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#2d2d2d] bg-[#949494] text-base font-bold text-white">
             {user.profileImageUrl ? (
-              <Image
+              <SkeletonImage
                 src={user.profileImageUrl}
                 alt={user.name}
                 fill
                 className="object-cover"
+                containerClassName="absolute inset-0"
                 sizes="36px"
                 unoptimized={user.profileImageUrl.startsWith("http")}
               />

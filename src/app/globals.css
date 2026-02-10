@@ -83,8 +83,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  min-height: 100dvh;
-  overflow-x: hidden;
+  height: 100%;
+  overflow: hidden; /* Root scrollt nicht – Scrollports liegen in den Shells */
 }
 
 /* API-Dokumentation (Swagger UI): eigenständiges UI, kein App-Design */

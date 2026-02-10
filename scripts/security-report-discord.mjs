@@ -280,16 +280,6 @@ function buildDiscordPayload(parsed, grokSummary, testResult, fixInfo) {
     });
   }
 
-  if (grokSummary && grokSummary.length > 0) {
-    const text =
-      grokSummary.length > 1024 ? grokSummary.slice(0, 1020) + "…" : grokSummary;
-    fields.push({
-      name: "KI-Einschätzung (Grok)",
-      value: text,
-      inline: false,
-    });
-  }
-
   const repo = process.env.GITHUB_REPOSITORY ?? "CineVaultV2";
   const runId = process.env.GITHUB_RUN_ID ?? "";
   const runUrl = process.env.GITHUB_SERVER_URL
@@ -314,7 +304,14 @@ function buildDiscordPayload(parsed, grokSummary, testResult, fixInfo) {
 
   if (runUrl) embed.url = runUrl;
 
-  return { embeds: [embed] };
+  // KI-Einschätzung als Nachricht (content), nicht im Embed – weniger Abschneiden, Discord-Markdown
+  const MAX_CONTENT_LEN = 2000;
+  const payload = { embeds: [embed] };
+  if (grokSummary && grokSummary.length > 0) {
+    const block = `**🔒 KI-Einschätzung (Grok)**\n\n${grokSummary}`;
+    payload.content = block.length > MAX_CONTENT_LEN ? block.slice(0, MAX_CONTENT_LEN - 1) + "…" : block;
+  }
+  return payload;
 }
 
 async function sendDiscord(payload) {

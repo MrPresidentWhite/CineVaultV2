@@ -1,7 +1,8 @@
-"use client";
+ "use client";
 
 import { useState } from "react";
 import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { SeriesDetailSeason } from "@/lib/series-data";
 import { EpisodeRow } from "./EpisodeRow";
 
@@ -48,7 +49,7 @@ export function SeasonBlock({
       >
         {season.posterUrl ? (
           <div className="cv-sea season__posterWrap">
-            <Image
+            <SkeletonImage
               src={season.posterUrl}
               alt={`Staffel ${season.seasonNumber} Poster`}
               width={128}

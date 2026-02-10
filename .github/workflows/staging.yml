@@ -14,6 +14,8 @@ jobs:
     permissions:
       contents: read
       actions: read
+      # write für actions/cache (Speichern des Caches)
+      actions: write
     env:
       # Nur für CI-Build: src/lib/env.ts verlangt in Prod SESSION_SECRET und getDatabaseUrl() DB-Config.
       # Echte Prod nutzt Secrets aus der Server-.env; hier reichen Platzhalter (kein echter DB-Zugriff).
@@ -31,11 +33,30 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      - name: Cache node_modules
+        id: node-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-${{ runner.os }}-
+
       - name: Install dependencies
+        if: steps.node-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Prisma generate
         run: npm run db:generate
+
+      - name: Cache Next.js build
+        id: next-cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'prisma/schema.prisma', 'next.config.ts', 'tsconfig.json') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Lint
         id: lint

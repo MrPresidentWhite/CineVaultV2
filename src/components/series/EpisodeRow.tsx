@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { SeriesDetailEpisode } from "@/lib/series-data";
 import { ChecksumRow } from "@/components/movie/ChecksumRow";
 
@@ -98,7 +99,7 @@ export function EpisodeRow({ episode, canEdit, onEdit }: Props) {
         )}
         <div className="cv-sea episode-row__still">
           {episode.stillUrl ? (
-            <Image
+            <SkeletonImage
               src={episode.stillUrl}
               alt={`Episode ${episode.episodeNumber} Still`}
               width={140}
