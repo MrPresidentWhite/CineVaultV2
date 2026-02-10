@@ -7,7 +7,7 @@ import {
   MediaType as MediaTypeEnum,
 } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
-import { getMovieDetails, getMovieReleaseInfo } from "@/lib/tmdb";
+import { getMovieDetails, getMovieReleaseInfo, getCollectionDetails } from "@/lib/tmdb";
 import {
   ensureTmdbCached,
   getObjectAsBuffer,
@@ -116,12 +116,25 @@ export async function POST(request: Request) {
       throw new Error("TMDb-Details nicht gefunden");
     }
 
+    // Collection erst bei 2. Film anlegen; ersten Film ohne Collection speichern, beim zweiten nachträglich verknüpfen
     let collectionId: number | null = null;
+    let collectionPartTmdbIds: number[] = [];
     if (d.belongs_to_collection?.id) {
-      collectionId = await getOrCreateCollectionByTmdbId(
-        d.belongs_to_collection.id,
-        (p, msg) => onProgress?.(p * 0.2, msg)
-      );
+      const collTmdbId = d.belongs_to_collection.id;
+      const col = await getCollectionDetails(collTmdbId).catch(() => null);
+      collectionPartTmdbIds = col?.parts?.map((p) => p.id) ?? [];
+      const existingInCollectionCount = await prisma.movie.count({
+        where: {
+          tmdbId: { in: collectionPartTmdbIds },
+          collectionId: null,
+        },
+      });
+      if (existingInCollectionCount >= 1) {
+        collectionId = await getOrCreateCollectionByTmdbId(
+          collTmdbId,
+          (p, msg) => onProgress?.(p * 0.2, msg)
+        );
+      }
     }
 
     const year = d.release_date
@@ -222,6 +235,17 @@ export async function POST(request: Request) {
         changedBy: auth?.user?.id ?? null,
       },
     });
+
+    // Nachträglich alle Filme dieser Collection verknüpfen (z. B. ersten Film, der ohne Collection angelegt wurde)
+    if (collectionId != null && collectionPartTmdbIds.length > 0) {
+      await prisma.movie.updateMany({
+        where: {
+          tmdbId: { in: collectionPartTmdbIds },
+          collectionId: null,
+        },
+        data: { collectionId },
+      });
+    }
 
     onProgress?.(100, "Fertig.");
     return { id: created.id, title: created.title };

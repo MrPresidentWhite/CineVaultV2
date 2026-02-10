@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 /**
  * Security Report → Grok (AI summary) → Discord Webhook
- * Liest npm audit --json + optional Test-Ausgabe, Grok-Einschätzung, sendet Embed an Discord.
+ * Liest npm audit --json + optional npm audit Text (audit.txt) + optional Test-Ausgabe,
+ * parst Fix-Empfehlung (sicher vs --force/breaking), Grok-Einschätzung, sendet Embed an Discord.
  * Env: GROK_API_URL, GROK_API_KEY, GROK_API_MODEL, DISCORD_SECURITY_WEBHOOK
- * Usage: node scripts/security-report-discord.mjs [audit.json] [test-output.txt]
+ * Usage: node scripts/security-report-discord.mjs [audit.json] [audit.txt] [test-output.txt]
  */
 
 import { readFileSync, existsSync } from "fs";
 
-const AUDIT_PATH = process.argv[2] || "audit.json";
-const TEST_OUTPUT_PATH = process.argv[3] || null;
+// argv[2]=audit.json, argv[3]=audit.txt, argv[4]=test-output.txt; bei 2 Arg: argv[3]=test-output.txt
+const a2 = process.argv[2];
+const a3 = process.argv[3];
+const a4 = process.argv[4];
+const AUDIT_PATH = a2 || "audit.json";
+const AUDIT_TXT_PATH = a4 ? a3 : null;
+const TEST_OUTPUT_PATH = a4 || a3 || null;
 
 function readAudit(path) {
   try {
@@ -42,7 +48,9 @@ function parseAudit(audit) {
       .filter((x) => x && typeof x === "object" && x.url)
       .map((x) => x.url)
       .slice(0, 2);
-    vulnList.push({ name, severity: sev, ids });
+    const firstVia = via.find((x) => x && typeof x === "object");
+    const title = firstVia?.title ?? firstVia?.url ?? null;
+    vulnList.push({ name, severity: sev, ids, title });
   }
   vulnList.sort((a, b) => severityOrder(b.severity) - severityOrder(a.severity));
 
@@ -60,6 +68,46 @@ function parseAudit(audit) {
 function severityOrder(s) {
   const o = { critical: 4, high: 3, moderate: 2, low: 1, info: 0 };
   return o[s] ?? -1;
+}
+
+/**
+ * Parst die Text-Ausgabe von npm audit und erkennt, ob ein sicherer Fix möglich ist
+ * oder ob npm audit fix --force (Breaking Change) nötig wäre.
+ */
+function parseAuditText(content) {
+  if (!content || typeof content !== "string") return null;
+  const text = content;
+  const fixForceRequired =
+    text.includes("npm audit fix --force") || text.includes("breaking change");
+  const fixSafeAvailable = text.includes("fix available via `npm audit fix`");
+  let recommendation;
+  if (fixForceRequired && !fixSafeAvailable) {
+    recommendation =
+      "Teilweise nur mit npm audit fix --force (Breaking Change). Kann Projekt brechen – nicht blind ausführen.";
+  } else if (fixForceRequired && fixSafeAvailable) {
+    recommendation =
+      "Sicherer Fix: npm audit fix. Zusätzlich werden Fixes mit --force angeboten (Breaking Change) – diese vermeiden.";
+  } else if (fixSafeAvailable) {
+    recommendation = "Sicherer Fix möglich: npm audit fix ausführen.";
+  } else if (text.includes("vulnerabilities") && !fixSafeAvailable && !fixForceRequired) {
+    recommendation = "Kein automatischer Fix angezeigt. Manuell prüfen oder Updates abwarten.";
+  } else {
+    recommendation = null;
+  }
+  return {
+    fixSafeAvailable,
+    fixForceRequired,
+    recommendation,
+  };
+}
+
+function readAuditText(path) {
+  if (!path || !existsSync(path)) return null;
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -98,21 +146,24 @@ function readTestOutput(path) {
   }
 }
 
-function buildSummaryText(parsed, testResult) {
+function buildSummaryText(parsed, testResult, fixInfo) {
   const { critical, high, moderate, low, info, vulnList } = parsed;
   const lines = [
     `npm audit Zusammenfassung: ${critical} critical, ${high} high, ${moderate} moderate, ${low} low, ${info} info.`,
   ];
+  if (fixInfo?.recommendation) {
+    lines.push(`npm audit fix: ${fixInfo.recommendation}`);
+  }
   if (vulnList.length > 0) {
-    lines.push(
-      "Betroffene Pakete (max. 15): " +
-        vulnList
-          .slice(0, 15)
-          .map((v) => `${v.name} (${v.severity})`)
-          .join(", ")
-    );
+    lines.push("");
+    lines.push("Betroffene Pakete mit Kurzbeschreibung (für KI-Erklärung):");
+    for (const v of vulnList.slice(0, 25)) {
+      const desc = v.title ? ` – ${v.title}` : "";
+      lines.push(`- ${v.name} (${v.severity})${desc}`);
+    }
   }
   if (testResult) {
+    lines.push("");
     if (testResult.ok) {
       lines.push(`Tests: ${testResult.passed} bestanden (${testResult.total} gesamt).`);
     } else if (testResult.total > 0) {
@@ -140,14 +191,14 @@ async function callGrok(summaryText) {
       {
         role: "system",
         content:
-          "Du bist ein Security-Assistent. Antworte nur auf Deutsch, kurz (2–4 Sätze). Keine generischen Ratschläge, nur konkrete Einschätzung.",
+          "Du bist ein Security-Assistent. Antworte nur auf Deutsch. Gehe auf npm audit fix ein: Ob ein sicherer Fix (npm audit fix) reicht oder ob npm audit fix --force nötig wäre und das Projekt kaputt machen könnte. Liste die gefundenen vulnerablen Pakete auf und erkläre bei jedem (besonders bei high/critical), was das konkrete Problem ist (z.B. DoS, XSS, Prototype Pollution). Gib klare Handlungsempfehlungen.",
       },
       {
         role: "user",
-        content: `Hier ist der Auszug eines Security-Reports (npm audit + ggf. Testergebnisse):\n\n${summaryText}\n\nWie kritisch ist die Lage insgesamt? Soll sofort etwas gemacht werden oder reicht zeitnah? Berücksichtige sowohl Schwachstellen als auch Testergebnisse. Nur sachliche Einschätzung in 2–4 Sätzen.`,
+        content: `Hier ist der Auszug eines Security-Reports (npm audit + Fix-Hinweis + ggf. Testergebnisse):\n\n${summaryText}\n\nBitte: (1) Einschätzung: Wie kritisch ist die Lage? Sofort handeln oder zeitnah? (2) npm audit fix: Soll „npm audit fix“ ausgeführt werden? Wenn „npm audit fix --force“ / Breaking Change erwähnt wird – würde das das Projekt kaputt machen, was empfiehlst du? (3) Liste die gefundenen vulnerablen Pakete auf und erkläre jeweils kurz, was das Problem ist (bei high/critical ausführlicher). Antworte in 6–12 Sätzen, sachlich und mit konkreten Empfehlungen.`,
       },
     ],
-    max_tokens: 300,
+    max_tokens: 900,
   };
 
   try {
@@ -183,7 +234,7 @@ function discordColor(parsed) {
   return 0x2ecc71; // grün
 }
 
-function buildDiscordPayload(parsed, grokSummary, testResult) {
+function buildDiscordPayload(parsed, grokSummary, testResult, fixInfo) {
   const { critical, high, moderate, low, info, total, vulnList } = parsed;
   let color = discordColor(parsed);
   if (testResult && !testResult.ok && testResult.total > 0 && critical === 0) {
@@ -198,6 +249,14 @@ function buildDiscordPayload(parsed, grokSummary, testResult) {
     { name: "Info", value: String(info), inline: true },
     { name: "Gesamt", value: String(total), inline: true },
   ];
+
+  if (fixInfo?.recommendation) {
+    fields.push({
+      name: "npm audit fix",
+      value: fixInfo.recommendation.length > 1024 ? fixInfo.recommendation.slice(0, 1020) + "…" : fixInfo.recommendation,
+      inline: false,
+    });
+  }
 
   if (testResult !== undefined && testResult !== null) {
     const testValue =
@@ -224,7 +283,11 @@ function buildDiscordPayload(parsed, grokSummary, testResult) {
   if (grokSummary && grokSummary.length > 0) {
     const text =
       grokSummary.length > 1024 ? grokSummary.slice(0, 1020) + "…" : grokSummary;
-    fields.push({ name: "KI-Einschätzung (Grok)", value: text, inline: false });
+    fields.push({
+      name: "KI-Einschätzung (Grok)",
+      value: text,
+      inline: false,
+    });
   }
 
   const repo = process.env.GITHUB_REPOSITORY ?? "CineVaultV2";
@@ -278,14 +341,16 @@ async function sendDiscord(payload) {
 async function main() {
   const audit = readAudit(AUDIT_PATH);
   const parsed = parseAudit(audit);
+  const auditTxtRaw = readAuditText(AUDIT_TXT_PATH);
+  const fixInfo = auditTxtRaw ? parseAuditText(auditTxtRaw) : null;
   const testOutputRaw = readTestOutput(TEST_OUTPUT_PATH);
   const testResult = testOutputRaw ? parseTestOutput(testOutputRaw) : null;
-  const summaryText = buildSummaryText(parsed, testResult);
+  const summaryText = buildSummaryText(parsed, testResult, fixInfo);
 
   let grokSummary = null;
   grokSummary = await callGrok(summaryText);
 
-  const payload = buildDiscordPayload(parsed, grokSummary, testResult);
+  const payload = buildDiscordPayload(parsed, grokSummary, testResult, fixInfo);
   await sendDiscord(payload);
 }
 

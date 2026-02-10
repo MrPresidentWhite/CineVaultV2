@@ -32,6 +32,7 @@ jobs:
         id: audit
         run: |
           npm audit --json > audit.json 2>&1 || true
+          npm audit 2>&1 | tee audit.txt || true
           echo "audit_done=1" >> $GITHUB_OUTPUT
 
       - name: Run tests
@@ -46,4 +47,4 @@ jobs:
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
           GROK_API_MODEL: ${{ secrets.GROK_API_MODEL }}
           DISCORD_SECURITY_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
-        run: node scripts/security-report-discord.mjs audit.json test-output.txt
+        run: node scripts/security-report-discord.mjs audit.json audit.txt test-output.txt
