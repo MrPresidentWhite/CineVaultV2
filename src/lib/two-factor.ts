@@ -33,18 +33,19 @@ export function getTotpKeyUri(secret: string, email: string, issuer: string): st
 /**
  * Normalisiert TOTP-Eingabe: Leerzeichen entfernen, Unicode-Ziffern (z. B. Vollbreite,
  * iOS-Autofill) in ASCII 0–9 umwandeln. Reduziert "ungültiger Code" auf Mobile.
+ * Exportiert für Verwendung in der 2FA-Route vor dem Regex-Check.
  */
-function normalizeTotpInput(raw: string): string {
+export function normalizeTotpInput(raw: string): string {
   const s = raw.replace(/\s/g, "");
   if (s.length !== 6) return s;
-  const out: string[] = [];
+  let out = "";
   for (let i = 0; i < 6; i++) {
-    const c = s.charCodeAt(i);
-    if (c >= 0x30 && c <= 0x39) out.push(s[i]!);
-    else if (c >= 0xff10 && c <= 0xff19) out.push(String.fromCharCode(0x30 + (c - 0xff10)));
+    const c = s[i]!;
+    const num = parseInt(c, 10);
+    if (!Number.isNaN(num) && num >= 0 && num <= 9) out += String(num);
     else return s;
   }
-  return out.join("");
+  return out;
 }
 
 /** Prüft einen 6-stelligen TOTP-Code (mit Toleranz-Fenster ±30s für Mobile-Uhren). Async (otplib v13). */

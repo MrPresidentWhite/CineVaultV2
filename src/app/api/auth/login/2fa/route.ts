@@ -22,6 +22,7 @@ import {
   decryptTotpSecret,
   verifyTotpToken,
   hashBackupCode,
+  normalizeTotpInput,
 } from "@/lib/two-factor";
 import { getPublicOrigin, getSafeCallbackPath } from "@/lib/request-url";
 
@@ -151,9 +152,11 @@ export async function POST(request: Request) {
   }
 
   let codeValid = false;
-  if (/^\d{6}$/.test(code)) {
+  // TOTP-Branch: Eingabe normalisieren (Unicode-Ziffern, z. B. iOS-Autofill) vor Regex-Check
+  const totpCode = normalizeTotpInput(code);
+  if (/^\d{6}$/.test(totpCode)) {
     const secret = decryptTotpSecret(user.totpSecretEncrypted ?? "");
-    codeValid = secret ? await verifyTotpToken(code, secret) : false;
+    codeValid = secret ? await verifyTotpToken(totpCode, secret) : false;
   } else {
     const hash = hashBackupCode(code);
     const backup = await prisma.userBackupCode.findFirst({
