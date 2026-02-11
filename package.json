@@ -14,6 +14,7 @@
     "db:studio": "prisma studio",
     "db:import-mysql": "tsx scripts/migrate-mysql-to-postgres.ts",
     "db:link-collections": "tsx scripts/link-movie-collections.ts",
+    "logo:svg-to-png": "node scripts/convert-logo-svg-to-png.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

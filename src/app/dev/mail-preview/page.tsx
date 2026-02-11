@@ -1,18 +1,15 @@
 import { redirect } from "next/navigation";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import { isDev, APP_URL, R2_PUBLIC_BASE_URL } from "@/lib/env";
 import { renderMovieNotificationHtml } from "@/lib/email-templates";
-import type { DigestSummary } from "@/lib/email-templates";
+import { buildDigestSummariesWithSteps } from "@/lib/digest-job";
 import { MailPreviewClient } from "./MailPreviewClient";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import type { Status } from "@/generated/prisma/enums";
 
 function publicUrl(key: string): string {
   if (!key) return "";
   if (key.startsWith("http://") || key.startsWith("https://")) return "";
-  const base = (R2_PUBLIC_BASE_URL ?? "").replace(/\/+$/, "");
+  const base = (R2_PUBLIC_BASE_URL || APP_URL || "").replace(/\/+$/, "");
   const path = key.replace(/^\/+/, "");
   return base ? `${base}/${path}` : path || "";
 }
@@ -42,6 +39,7 @@ export default async function DevMailPreviewPage() {
       from: true,
       to: true,
       changedAt: true,
+      fromScheduledAt: true,
       movie: {
         select: {
           id: true,
@@ -49,6 +47,7 @@ export default async function DevMailPreviewPage() {
           releaseYear: true,
           posterUrl: true,
           accentColor: true,
+          addedAt: true,
         },
       },
     },
@@ -68,21 +67,22 @@ export default async function DevMailPreviewPage() {
     return acc;
   }, {});
 
-  const summaries: DigestSummary[] = Object.values(grouped).map((group) => {
-    const events = group.events.sort(
-      (a, b) => a.changedAt.getTime() - b.changedAt.getTime()
-    );
-    const first = events[0];
-    const last = events[events.length - 1];
-    return {
-      movie: group.movie,
-      from: first.from,
-      to: last.to,
-      firstTime: format(first.changedAt, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
-      lastTime: format(last.changedAt, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
-      finalStatus: last.to as Status,
-    };
+  const movieIds = Object.keys(grouped).map(Number);
+  const allChangesForMovies = await prisma.movieStatusChange.findMany({
+    where: { movieId: { in: movieIds } },
+    select: { movieId: true, from: true, to: true, changedAt: true },
+    orderBy: { changedAt: "asc" },
   });
+  const changesByMovie = new Map<
+    number,
+    { movieId: number; from: string; to: string; changedAt: Date }[]
+  >();
+  for (const c of allChangesForMovies) {
+    if (!changesByMovie.has(c.movieId)) changesByMovie.set(c.movieId, []);
+    changesByMovie.get(c.movieId)!.push(c);
+  }
+
+  const summaries = buildDigestSummariesWithSteps(grouped, changesByMovie);
 
   const html = renderMovieNotificationHtml(
     { name: user.name, email: user.email },

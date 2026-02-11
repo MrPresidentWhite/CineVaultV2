@@ -2,6 +2,7 @@
  * E-Mail-HTML-Templates (inline CSS, tabellenbasiertes Layout für maximale Mail-Client-Kompatibilität).
  * Kein EJS – reine TS-Funktionen für bessere Typen und Wartung.
  * Alle Bild-URLs müssen absolut sein (publicUrl mit APP_URL/R2_PUBLIC_BASE_URL).
+ * Logo: PNG erforderlich (SVG wird von Gmail/Outlook blockiert) – uploads/assets/logo-big.png oder /assets/logo-big.png.
  */
 
 import { format } from "date-fns";
@@ -51,6 +52,12 @@ function filmCountLabel(count: number): string {
   return count === 1 ? "1 Film" : `${count} Filme`;
 }
 
+export type DigestStep = {
+  status: Status | string;
+  time: string;
+  scheduledAt?: Date | null;
+};
+
 export type DigestSummary = {
   movie: {
     id: number;
@@ -61,11 +68,11 @@ export type DigestSummary = {
   };
   from: Status | string;
   to: Status | string;
-  firstTime: string;
-  lastTime: string;
   finalStatus: Status | string;
   /** Bei from=VO_SOON: geplantes Datum für E-Mail „VÖ: Demnächst (Datum)“ */
   fromScheduledAt?: Date | null;
+  /** Gefilterte Zwischenschritte (1. …, 2. …, 3. …) */
+  steps: DigestStep[];
 };
 
 export type DigestUser = {
@@ -73,14 +80,14 @@ export type DigestUser = {
   email: string;
 };
 
-function fromLabelForEmail(s: DigestSummary): string {
-  if (s.from === StatusEnum.VO_SOON && s.fromScheduledAt) {
-    const dateStr = format(new Date(s.fromScheduledAt), "d. MMMM yyyy", {
+function stepLabelForEmail(step: DigestStep): string {
+  if (step.status === StatusEnum.VO_SOON && step.scheduledAt) {
+    const dateStr = format(new Date(step.scheduledAt), "d. MMMM yyyy", {
       locale: de,
     });
     return `VÖ: Demnächst (${dateStr})`;
   }
-  return statusLabel(s.from);
+  return statusLabel(step.status);
 }
 
 function renderMovieCard(
@@ -91,14 +98,22 @@ function renderMovieCard(
   const accent = s.movie.accentColor || styles.gold;
   const posterSrc = s.movie.posterUrl ? publicUrl(s.movie.posterUrl) : "";
   const hasPoster = Boolean(posterSrc);
-  const fromLabel = fromLabelForEmail(s);
+  const stepsHtml =
+    s.steps.length > 0
+      ? s.steps
+          .map(
+            (st, i) =>
+              `${i + 1}. ${esc(st.time)} <strong style="color:${styles.gold}">„${esc(stepLabelForEmail(st))}"</strong>`
+          )
+          .join("<br>")
+      : `${esc(s.from)} → ${esc(statusLabel(s.to))}`;
   const posterCell = hasPoster
     ? `<td width="140" valign="top" style="padding:0 16px 0 0;vertical-align:top;"><img src="${esc(posterSrc)}" alt="${esc(s.movie.title)}" width="140" height="210" style="display:block;width:140px;height:210px;border:0;border-radius:8px;background:${styles.ring};" /></td>`
     : "";
   const bodyCell = `<td valign="top" style="padding:16px;vertical-align:top;">
     <div style="font-size:18px;font-weight:600;color:${styles.gold};margin-bottom:8px;">${esc(s.movie.title)} <span style="font-size:14px;color:#aaa;">(${s.movie.releaseYear})</span></div>
-    <div style="font-size:14px;margin:10px 0;padding:10px;background:${styles.goldBg};border-radius:8px;color:${styles.text};">
-      ${esc(s.firstTime)} <strong style="color:${styles.gold}">„${esc(fromLabel)}"</strong> → ${esc(s.lastTime)} <strong style="color:${styles.gold}">„${esc(statusLabel(s.to))}"</strong>
+    <div style="font-size:14px;margin:10px 0;padding:10px;background:${styles.goldBg};border-radius:8px;color:${styles.text};line-height:1.8;">
+      ${stepsHtml}
     </div>
     <a href="${esc(appUrl)}/movies/${String(s.movie.id)}" style="display:inline-block;padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;margin-top:12px;background:${accent};color:#000;text-decoration:none;">Zur Detailseite</a>
   </td>`;
@@ -117,9 +132,12 @@ export function renderMovieNotificationHtml(
   publicUrl: (key: string) => string
 ): string {
   const userName = user.name?.trim() || user.email;
-  const logoUrl = publicUrl("uploads/assets/logo-big.svg");
+  // PNG von CDN (uploads/assets/logo-big.png); Fallback auf App-Static oder Text
+  const logoUrl =
+    publicUrl("uploads/assets/logo-big.png") ||
+    `${appUrl.replace(/\/+$/, "")}/assets/logo-big.png`;
   const logoHtml = logoUrl
-    ? `<img src="${esc(logoUrl)}" alt="CineVault" width="52" height="52" style="display:block;width:52px;height:52px;margin:0 auto 10px;border:0;border-radius:8px;" />`
+    ? `<img src="${esc(logoUrl)}" alt="CineVault" width="180" height="34" style="display:block;width:180px;height:34px;margin:0 auto 10px;border:0;max-width:100%;" />`
     : `<span style="font-size:20px;font-weight:700;color:${styles.gold};">CineVault</span>`;
 
   const byStatus = summaries.reduce<Record<string, DigestSummary[]>>((acc, s) => {
@@ -158,6 +176,11 @@ export function renderMovieNotificationHtml(
     })
     .join("");
 
+  const inlineStyleBlock = `
+body { margin:0; padding:0; font-family:Arial,Helvetica,sans-serif; background:${styles.bg}; color:${styles.text}; line-height:1.5; font-size:15px; -webkit-text-size-adjust:100%; }
+a { color:${styles.gold}; }
+img { border:0; }
+`;
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -167,6 +190,7 @@ export function renderMovieNotificationHtml(
   <meta name="x-apple-disable-message-reformatting" content="yes">
   <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>CineVault – ${summaries.length} ${summaries.length === 1 ? "Film" : "Filme"} geändert</title>
+  <style type="text/css">${inlineStyleBlock}</style>
 </head>
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:${styles.bg};color:${styles.text};line-height:1.5;font-size:15px;-webkit-text-size-adjust:100%;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${styles.bg};">

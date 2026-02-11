@@ -6,13 +6,21 @@
 
 import { prisma } from "@/lib/db";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
-import { renderMovieNotificationHtml } from "@/lib/email-templates";
-import { APP_URL, R2_PUBLIC_BASE_URL, DISCORD_WEBHOOK_URL } from "@/lib/env";
+import {
+  renderMovieNotificationHtml,
+  type DigestSummary,
+} from "@/lib/email-templates";
+import { APP_URL, DISCORD_WEBHOOK_URL, R2_PUBLIC_BASE_URL } from "@/lib/env";
 import type { Status } from "@/generated/prisma/enums";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 const DIGEST_WINDOW_HOURS = 12;
+
+/** Minuten: Änderungen näher beieinander = Burst, nur letzte behalten */
+const STEP_BURST_MINUTES = 5;
+/** Max. Schritte pro Film (danach 1, 2, "...", n-1, n) */
+const MAX_STEPS = 7;
 
 const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED"];
 const DISCORD_TITLES: Partial<
@@ -27,6 +35,131 @@ const DISCORD_TITLES: Partial<
     plural: "Folgende Filme sind ab sofort archiviert",
   },
 };
+
+type StepInput = { status: Status | string; time: Date; scheduledAt?: Date | null };
+
+function filterMeaningfulSteps(steps: StepInput[]): StepInput[] {
+  if (steps.length <= 1) return steps;
+
+  let result: StepInput[] = [];
+  const burstMs = STEP_BURST_MINUTES * 60 * 1000;
+  const seen = new Set<string>();
+
+  for (let i = 0; i < steps.length; i++) {
+    const curr = steps[i];
+    const statusKey = String(curr.status);
+
+    // 1. Consecutive duplicate: überspringen
+    if (result.length > 0 && result[result.length - 1].status === curr.status) continue;
+
+    // 2. Oszillation: Status schon gesehen und zuletzt anderer → Zyklus, überspringen
+    if (seen.has(statusKey)) {
+      const prev = result[result.length - 1];
+      if (prev && String(prev.status) !== statusKey) continue;
+    }
+    seen.add(statusKey);
+
+    // 3. Burst: mehrere Schritte innerhalb STEP_BURST_MINUTES – letzte behalten
+    let lastInBurst = i;
+    for (let j = i + 1; j < steps.length; j++) {
+      if (steps[j].time.getTime() - steps[i].time.getTime() <= burstMs) {
+        lastInBurst = j;
+      } else break;
+    }
+    const stepToAdd = steps[lastInBurst];
+    // Nach Burst: ggf. Duplikat zum letzten (z.B. A→B→A in 2 min)
+    if (result.length > 0 && result[result.length - 1].status === stepToAdd.status) continue;
+    result.push(stepToAdd);
+    i = lastInBurst;
+  }
+
+  // 4. Max Schritte: bei Überfluss 1, 2, "...", n-1, n
+  if (result.length > MAX_STEPS) {
+    const keepFirst = 2;
+    const keepLast = 2;
+    const mid = result.length - keepFirst - keepLast;
+    result = [
+      ...result.slice(0, keepFirst),
+      { status: `… (${mid} weitere)`, time: result[keepFirst].time } as StepInput,
+      ...result.slice(-keepLast),
+    ];
+  }
+
+  return result;
+}
+
+type GroupEvent = {
+  from: Status | string;
+  to: Status | string;
+  changedAt: Date;
+  fromScheduledAt?: Date | null;
+};
+
+type GroupMovie = {
+  id: number;
+  title: string;
+  releaseYear: number;
+  posterUrl: string | null;
+  accentColor: string | null;
+  addedAt: Date;
+};
+
+type PrevChange = { movieId: number; from: string; to: string; changedAt: Date };
+
+export function buildDigestSummariesWithSteps(
+  grouped: Record<number, { movie: GroupMovie; events: GroupEvent[] }>,
+  changesByMovie: Map<number, PrevChange[]>
+): DigestSummary[] {
+  return Object.values(grouped).map((group) => {
+    const events = [...group.events].sort(
+      (a, b) => a.changedAt.getTime() - b.changedAt.getTime()
+    );
+    const first = events[0];
+    const last = events[events.length - 1];
+    const movieChanges = changesByMovie.get(group.movie.id) ?? [];
+    const enteredFrom = movieChanges.filter(
+      (c) => c.to === first.from && c.changedAt < first.changedAt
+    );
+    const enteredFromAt =
+      enteredFrom.length > 0
+        ? enteredFrom[enteredFrom.length - 1].changedAt
+        : group.movie.addedAt;
+
+    const rawSteps: StepInput[] = [
+      {
+        status: first.from,
+        time: enteredFromAt,
+        scheduledAt: first.from === "VO_SOON" ? first.fromScheduledAt : undefined,
+      },
+      ...events.map((e, i) => ({
+        status: e.to,
+        time: e.changedAt,
+        scheduledAt:
+          e.to === "VO_SOON" ? events[i + 1]?.fromScheduledAt : undefined,
+      })),
+    ];
+    const filteredSteps = filterMeaningfulSteps(rawSteps);
+
+    return {
+      movie: {
+        id: group.movie.id,
+        title: group.movie.title,
+        releaseYear: group.movie.releaseYear,
+        posterUrl: group.movie.posterUrl,
+        accentColor: group.movie.accentColor,
+      },
+      from: first.from,
+      to: last.to,
+      finalStatus: last.to,
+      fromScheduledAt: first.fromScheduledAt,
+      steps: filteredSteps.map((st) => ({
+        status: st.status,
+        time: format(st.time, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
+        scheduledAt: st.scheduledAt,
+      })),
+    };
+  });
+}
 
 function publicUrl(key: string): string {
   if (!key) return "";
@@ -76,6 +209,7 @@ export async function sendStatusDigestJob(): Promise<void> {
           releaseYear: true,
           posterUrl: true,
           accentColor: true,
+          addedAt: true,
         },
       },
     },
@@ -132,22 +266,20 @@ export async function sendStatusDigestJob(): Promise<void> {
       return acc;
     }, {});
 
-    const summaries = Object.values(grouped).map((group) => {
-      const events = group.events.sort(
-        (a, b) => a.changedAt.getTime() - b.changedAt.getTime()
-      );
-      const first = events[0];
-      const last = events[events.length - 1];
-      return {
-        movie: group.movie,
-        from: first.from,
-        to: last.to,
-        firstTime: format(first.changedAt, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
-        lastTime: format(last.changedAt, "dd.MM.yyyy, HH:mm 'Uhr'", { locale: de }),
-        finalStatus: last.to,
-        fromScheduledAt: first.fromScheduledAt,
-      };
+    // Vorgänger-Changes für firstTime (wann wurde "from" angetreten?)
+    const movieIds = Object.keys(grouped).map(Number);
+    const allChangesForMovies = await prisma.movieStatusChange.findMany({
+      where: { movieId: { in: movieIds } },
+      select: { movieId: true, from: true, to: true, changedAt: true },
+      orderBy: { changedAt: "asc" },
     });
+    const changesByMovie = new Map<number, typeof allChangesForMovies>();
+    for (const c of allChangesForMovies) {
+      if (!changesByMovie.has(c.movieId)) changesByMovie.set(c.movieId, []);
+      changesByMovie.get(c.movieId)!.push(c);
+    }
+
+    const summaries = buildDigestSummariesWithSteps(grouped, changesByMovie);
 
     const users = await prisma.user.findMany({
       where: { notificationsEnabled: true },
