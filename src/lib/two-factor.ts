@@ -35,7 +35,7 @@ export function getTotpKeyUri(secret: string, email: string, issuer: string): st
  * iOS-Autofill) in ASCII 0–9 umwandeln. Reduziert "ungültiger Code" auf Mobile.
  */
 function normalizeTotpInput(raw: string): string {
-  let s = raw.replace(/\s/g, "");
+  const s = raw.replace(/\s/g, "");
   if (s.length !== 6) return s;
   const out: string[] = [];
   for (let i = 0; i < 6; i++) {
