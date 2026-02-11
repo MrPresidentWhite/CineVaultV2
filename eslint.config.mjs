@@ -11,6 +11,10 @@ const eslintConfig = defineConfig([
     rules: {
       // Security-Report v2 Abschnitt 11.2: Nutzerdaten nur als Text, kein dangerouslySetInnerHTML.
       "react/no-danger": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   // Override default ignores of eslint-config-next.

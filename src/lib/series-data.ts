@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db";
 import { toPublicUrl } from "@/lib/storage";
 import { cacheGetOrSet } from "@/lib/cache";
 import { genreLabelTV } from "@/lib/enum-mapper";
-import type { TVGenre } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 
 const SERIES_DETAIL_TTL = 60;

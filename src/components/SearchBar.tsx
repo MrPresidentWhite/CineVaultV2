@@ -154,6 +154,7 @@ export function SearchBar() {
         className="search__input w-full rounded-[10px] border border-ring bg-[#0f0f0f] px-3 py-2.5 text-text outline-none placeholder:text-text/60 focus:border-ring focus:ring-2 focus:ring-ring/40 md:px-3.5 md:py-3"
         aria-label="Suche nach Filmen, Collections oder Serien"
         autoComplete="off"
+        role="combobox"
         aria-autocomplete="list"
         aria-expanded={!!(open && hasResults)}
         aria-controls="searchListbox"
@@ -182,7 +183,7 @@ export function SearchBar() {
               {result.movies.map((m) => {
                 const idx = flatIndex++;
                 return (
-                <li key={`m-${m.id}`} className="search-dd__item my-0.5" role="option">
+                <li key={`m-${m.id}`} className="search-dd__item my-0.5" role="option" aria-selected={activeIndex === idx}>
                   <Link
                     id={`search-option-${idx}`}
                     href={m.href}
@@ -222,7 +223,7 @@ export function SearchBar() {
               {result.collections.map((c) => {
                 const idx = flatIndex++;
                 return (
-                <li key={`c-${c.id}`} className="search-dd__item my-0.5" role="option">
+                <li key={`c-${c.id}`} className="search-dd__item my-0.5" role="option" aria-selected={activeIndex === idx}>
                   <Link
                     id={`search-option-${idx}`}
                     href={c.href}
@@ -259,7 +260,7 @@ export function SearchBar() {
               {result.series.map((s) => {
                 const idx = flatIndex++;
                 return (
-                <li key={`s-${s.id}`} className="search-dd__item my-0.5" role="option">
+                <li key={`s-${s.id}`} className="search-dd__item my-0.5" role="option" aria-selected={activeIndex === idx}>
                   <Link
                     id={`search-option-${idx}`}
                     href={s.href}

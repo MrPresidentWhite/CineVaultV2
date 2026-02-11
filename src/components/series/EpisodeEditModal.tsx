@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import type { SeriesDetailEpisode } from "@/lib/series-data";
 
 type Props = {
@@ -15,14 +15,14 @@ export function EpisodeEditModal({ episode, onClose }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     if (!modalRef.current) return;
     modalRef.current.hidden = true;
     modalRef.current.setAttribute("aria-hidden", "true");
     document.documentElement.classList.remove("modal-open");
     document.body.classList.remove("modal-open");
     onClose();
-  };
+  }, [onClose]);
 
   useEffect(() => {
     const modal = modalRef.current;
@@ -54,7 +54,7 @@ export function EpisodeEditModal({ episode, onClose }: Props) {
       modal.removeEventListener("click", onBackdrop);
       modal.removeEventListener("click", onCloseBtn);
     };
-  }, [episode.id]);
+  }, [episode.id, closeModal]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

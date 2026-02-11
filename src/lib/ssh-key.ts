@@ -5,8 +5,6 @@
 
 import { parseKey } from "sshpk";
 
-const ALLOWED_TYPES = ["rsa", "ed25519"] as const;
-
 export type SshKeyInfo = {
   type: "rsa" | "ed25519";
   fingerprint: string;

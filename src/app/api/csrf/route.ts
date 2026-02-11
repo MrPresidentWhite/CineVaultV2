@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
-import { getSessionIdFromCookie, getSession, updateSession } from "@/lib/session";
+import { getSessionIdFromCookie, updateSession } from "@/lib/session";
 import { generateCsrfToken } from "@/lib/csrf";
 
 /**

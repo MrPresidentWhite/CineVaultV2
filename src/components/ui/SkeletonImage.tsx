@@ -49,6 +49,7 @@ export function SkeletonImage({
       )}
       <Image
         {...imageProps}
+        alt={imageProps.alt ?? ""}
         className={mergeClasses(
           className ?? "",
           loaded ? "opacity-100" : "opacity-0"

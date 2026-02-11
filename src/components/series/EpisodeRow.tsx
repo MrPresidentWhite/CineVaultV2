@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { SeriesDetailEpisode } from "@/lib/series-data";
 import { ChecksumRow } from "@/components/movie/ChecksumRow";

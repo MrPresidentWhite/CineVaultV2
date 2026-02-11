@@ -5,7 +5,7 @@
  * Ausführen: node scripts/convert-logo-svg-to-png.mjs
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import sharp from "sharp";

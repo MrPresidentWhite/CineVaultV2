@@ -73,7 +73,7 @@ export default async function SeriesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = parseSeriesListParams(await searchParams);
-  const { items, total, page, pageSize, totalPages } =
+  const { items, total, page, totalPages } =
     await getSeriesForListPaginated(params);
 
   const buildHref = (p: number) =>

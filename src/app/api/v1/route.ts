@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getApiSessionFromRequest } from "@/lib/api-session";
 
 /**
  * GET /api/v1

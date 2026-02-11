@@ -1,6 +1,7 @@
 // PM2-Konfiguration für CineVault V2 (Next.js)
 // Bei output: standalone → node .next/standalone/server.js (nicht next start)
 // cwd: .next/standalone, damit der Server die richtigen Pfade findet
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS config, require ist hier Standard */
 
 const path = require("path");
 

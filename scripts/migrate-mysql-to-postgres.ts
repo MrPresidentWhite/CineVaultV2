@@ -42,7 +42,7 @@ function extractInsertStatements(content: string): Map<string, string> {
 
   while ((m = regex.exec(content)) !== null) {
     const tableName = m[1];
-    const columnsPart = m[2];
+    void m[2]; // columnsPart, für Parsing vorhanden aber ungenutzt
     const startValues = m.index + m[0].length;
     let depth = 0;
     let inString = false;
@@ -126,7 +126,7 @@ function toPostgresInsert(mysqlInsert: string, tableName: string): string {
   return out;
 }
 
-function updateSequences(client: Client, tableNames: string[]): Promise<void> {
+function updateSequences(client: Client, _tableNames: string[]): Promise<void> {
   const tablesWithSerial = [
     "User",
     "Collection",

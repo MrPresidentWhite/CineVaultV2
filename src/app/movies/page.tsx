@@ -75,7 +75,7 @@ export default async function MoviesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = parseMovieListParams(await searchParams);
-  const { items, total, page, pageSize, totalPages } =
+  const { items, total, page, totalPages } =
     await getMoviesForListPaginated(params);
 
   const buildHref = (p: number) =>

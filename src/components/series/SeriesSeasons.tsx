@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { SeriesDetail, SeriesDetailSeason } from "@/lib/series-data";
+import type { SeriesDetail } from "@/lib/series-data";
 import { SeasonBlock } from "./SeasonBlock";
 import { EpisodeEditModal } from "./EpisodeEditModal";
 import type { SeriesDetailEpisode } from "@/lib/series-data";

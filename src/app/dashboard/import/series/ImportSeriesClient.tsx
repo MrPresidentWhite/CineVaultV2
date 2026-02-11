@@ -256,7 +256,7 @@ export function ImportSeriesClient() {
         sel.allEpisodes
           ? ("ALL" as const)
           : Array.from(sel.episodes.entries())
-              .filter(([_, v]) => v)
+              .filter(([, v]) => v)
               .map(([k]) => k);
       if (episodes === "ALL" || episodes.length > 0) {
         seasonsPayload.push({ seasonNumber: sn, episodes });

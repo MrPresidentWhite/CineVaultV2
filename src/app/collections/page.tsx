@@ -87,7 +87,7 @@ export default async function CollectionsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = parseCollectionListParams(await searchParams);
-  const { items, total, page, pageSize, totalPages } =
+  const { items, total, page, totalPages } =
     await getCollectionsForListPaginated(params);
 
   const buildHref = (p: number) =>

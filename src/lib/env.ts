@@ -10,14 +10,6 @@ function getEnv(key: string): string | undefined {
   return process.env[key];
 }
 
-function getEnvRequired(key: string): string {
-  const value = process.env[key];
-  if (value === undefined || value === "") {
-    throw new Error(`Missing required env: ${key}`);
-  }
-  return value;
-}
-
 function buildDatabaseUrl(): string | undefined {
   const host = getEnv("POSTGRES_HOST");
   const user = getEnv("POSTGRES_USER");
