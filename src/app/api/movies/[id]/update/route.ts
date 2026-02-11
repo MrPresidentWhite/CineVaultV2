@@ -90,8 +90,32 @@ export async function POST(
     data.statusScheduledAt = result.date;
   }
 
+  const newStatus = typeof body.status === "string" ? body.status : undefined;
+  let oldMovie: { status: string; statusScheduledAt: Date | null } | null = null;
+  if (newStatus) {
+    const existing = await prisma.movie.findUnique({
+      where: { id: idNum },
+      select: { status: true, statusScheduledAt: true },
+    });
+    if (existing) oldMovie = { status: existing.status, statusScheduledAt: existing.statusScheduledAt };
+  }
+
   try {
     await prisma.movie.update({ where: { id: idNum }, data: data as never });
+
+    if (oldMovie && newStatus && oldMovie.status !== newStatus) {
+      await prisma.movieStatusChange.create({
+        data: {
+          movieId: idNum,
+          from: oldMovie.status as (typeof StatusEnum)[keyof typeof StatusEnum],
+          to: newStatus as (typeof StatusEnum)[keyof typeof StatusEnum],
+          changedBy: auth.user.id,
+          fromScheduledAt:
+            oldMovie.status === StatusEnum.VO_SOON ? oldMovie.statusScheduledAt : null,
+        },
+      });
+    }
+
     await Promise.all([
       invalidateMovieCache(idNum),
       invalidateMoviesListCache(),

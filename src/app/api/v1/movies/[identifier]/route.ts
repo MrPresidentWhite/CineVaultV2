@@ -194,5 +194,18 @@ export async function PATCH(
     include: { genres: true },
   });
 
+  if (existing.status !== status) {
+    await prisma.movieStatusChange.create({
+      data: {
+        movieId: existing.id,
+        from: existing.status as (typeof StatusEnum)[keyof typeof StatusEnum],
+        to: status as (typeof StatusEnum)[keyof typeof StatusEnum],
+        changedBy: null,
+        fromScheduledAt:
+          existing.status === StatusEnum.VO_SOON ? existing.statusScheduledAt : null,
+      },
+    });
+  }
+
   return NextResponse.json(movieToResponse(updated));
 }
