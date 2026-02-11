@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 
 type SearchResult = {
   id: number;
@@ -375,12 +375,13 @@ export function ImportSeriesClient() {
                 >
                   <div className="h-16 w-11 shrink-0 overflow-hidden rounded-md bg-ring">
                     {img ? (
-                      <Image
+                      <SkeletonImage
                         src={img}
                         alt={r.name}
                         width={74}
                         height={108}
                         className="h-full w-full object-cover"
+                        skeletonClassName="rounded-md"
                         unoptimized
                       />
                     ) : null}
@@ -431,21 +432,23 @@ export function ImportSeriesClient() {
               <div className="w-full max-w-[220px] shrink-0">
                 <div className="overflow-hidden rounded-lg border border-ring bg-ring">
                   {details.posterUrl ? (
-                    <Image
+                    <SkeletonImage
                       src={details.posterUrl}
                       alt={details.name}
                       width={220}
                       height={330}
                       className="h-full w-full object-cover"
+                      skeletonClassName="rounded-lg"
                       unoptimized={details.posterUrl.startsWith("http")}
                     />
                   ) : details.backdropUrl ? (
-                    <Image
+                    <SkeletonImage
                       src={details.backdropUrl}
                       alt={details.name}
                       width={220}
                       height={124}
                       className="h-full w-full object-cover"
+                      skeletonClassName="rounded-lg"
                       unoptimized={details.backdropUrl.startsWith("http")}
                     />
                   ) : (
@@ -557,12 +560,13 @@ export function ImportSeriesClient() {
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-8 overflow-hidden rounded bg-ring">
                           {s.posterUrl ? (
-                            <Image
+                            <SkeletonImage
                               src={s.posterUrl}
                               alt={s.name}
                               width={48}
                               height={72}
                               className="h-full w-full object-cover"
+                              skeletonClassName="rounded"
                               unoptimized={s.posterUrl.startsWith("http")}
                             />
                           ) : null}
@@ -644,12 +648,13 @@ export function ImportSeriesClient() {
                                 >
                                   <div className="h-24 w-full overflow-hidden rounded bg-ring aspect-video">
                                     {ep.stillUrl ? (
-                                      <Image
+                                      <SkeletonImage
                                         src={ep.stillUrl}
                                         alt={ep.name || `Episode ${ep.episodeNumber}`}
                                         width={224}
                                         height={126}
                                         className="h-full w-full object-cover"
+                                        skeletonClassName="rounded"
                                         unoptimized={ep.stillUrl.startsWith("http")}
                                       />
                                     ) : null}

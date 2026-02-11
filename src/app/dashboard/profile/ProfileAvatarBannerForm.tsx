@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import { useRouter } from "next/navigation";
 
 type Props = {
@@ -98,12 +98,13 @@ export function ProfileAvatarBannerForm({
           </label>
           <div className="w-24 h-24 rounded-lg border border-ring bg-ring/30 overflow-hidden shrink-0 mb-2">
             {avatarUrl ? (
-              <Image
+              <SkeletonImage
                 src={avatarUrl}
                 alt={userName ?? "Avatar"}
                 width={96}
                 height={96}
                 className="w-full h-full object-cover"
+                skeletonClassName="rounded-lg"
                 unoptimized={avatarUrl.startsWith("http")}
               />
             ) : (
@@ -139,12 +140,13 @@ export function ProfileAvatarBannerForm({
             style={{ backgroundColor: `color-mix(in oklab, ${accent} 25%, #141414)` }}
           >
             {bannerUrl ? (
-              <Image
+              <SkeletonImage
                 src={bannerUrl}
                 alt=""
                 width={320}
                 height={96}
                 className="w-full h-full object-cover"
+                skeletonClassName="rounded-lg"
                 unoptimized={bannerUrl.startsWith("http")}
               />
             ) : null}

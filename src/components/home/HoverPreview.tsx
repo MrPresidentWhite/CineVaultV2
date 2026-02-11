@@ -144,7 +144,7 @@ export function HoverPreview({
           className={panelClassName ? `cv-hover__panel ${panelClassName}` : "cv-hover__panel"}
           aria-hidden={!open}
         >
-          {panel}
+          {open ? panel : null}
         </div>
       )}
     </div>

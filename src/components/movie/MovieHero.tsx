@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { MovieDetail } from "@/lib/movie-data";
 import { MovieHeroActions } from "./MovieHeroActions";
@@ -27,11 +26,12 @@ export function MovieHero({ movie, backUrl, canEdit, canAdmin }: Props) {
     >
       {movie.backdropUrl && (
         <div className="absolute inset-0">
-          <Image
+          <SkeletonImage
             src={movie.backdropUrl}
             alt=""
             fill
             className="movie-hero__bg object-cover"
+            containerClassName="absolute inset-0"
             sizes="100vw"
             priority
             unoptimized={movie.backdropUrl.startsWith("http")}

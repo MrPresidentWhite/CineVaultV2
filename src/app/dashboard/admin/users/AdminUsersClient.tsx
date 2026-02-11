@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 
 type UserRow = {
   id: number;
@@ -56,11 +56,12 @@ export function AdminUsersClient({ users, currentUserId }: Props) {
       {/* Banner (optional) */}
       <div className="relative h-16 border-b border-ring/60">
         {u.bannerUrl ? (
-          <Image
+          <SkeletonImage
             src={u.bannerUrl}
             alt=""
             fill
             className="object-cover"
+            containerClassName="absolute inset-0"
             unoptimized={u.bannerUrl.startsWith("http")}
             sizes="(max-width: 1024px) 100vw, 33vw"
           />
@@ -74,12 +75,13 @@ export function AdminUsersClient({ users, currentUserId }: Props) {
         <div className="flex items-center gap-3 mb-3">
           <div className="h-12 w-12 rounded-full overflow-hidden bg-ring flex items-center justify-center text-lg font-bold text-text/80 shrink-0">
             {u.avatarUrl ? (
-              <Image
+              <SkeletonImage
                 src={u.avatarUrl}
                 alt={u.name}
                 width={48}
                 height={48}
                 className="h-full w-full object-cover"
+                skeletonClassName="rounded-full"
                 unoptimized={u.avatarUrl.startsWith("http")}
               />
             ) : (

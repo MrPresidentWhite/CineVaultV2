@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import type { CollectionDetail } from "@/lib/collection-data";
 import { CollectionHeroActions } from "./CollectionHeroActions";
@@ -29,11 +28,12 @@ export function CollectionHero({
     >
       {bgUrl && (
         <div className="absolute inset-0">
-          <Image
+          <SkeletonImage
             src={bgUrl}
             alt=""
             fill
             className="collection-hero__bg object-cover"
+            containerClassName="absolute inset-0"
             sizes="100vw"
             priority
             unoptimized={bgUrl.startsWith("http")}

@@ -90,19 +90,28 @@ jobs:
 
       - name: Job-Logs herunterladen (für Discord-Anhang)
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p _joblogs && cd _joblogs
-          JOB_ID=$(curl -sS -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
-            | jq -r '.jobs[] | select(.name == env.GITHUB_JOB) | .id')
+          # Job-ID: erster Job (Staging hat nur einen Job)
+          JOBS_JSON=$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs")
+          JOB_ID=$(echo "$JOBS_JSON" | jq -r '.jobs[0].id // empty')
           if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
             echo "Job-ID nicht gefunden." > staging-job-logs.txt
           else
-            curl -sSL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            # API liefert 302 → Zip; mit -L redirect folgen
+            curl -sSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/actions/jobs/${JOB_ID}/logs" -o logs.zip
             if [ -f logs.zip ] && [ -s logs.zip ]; then
-              unzip -o -q logs.zip || true
-              ls -1 *.txt 2>/dev/null | sort -V | xargs cat > staging-job-logs.txt 2>/dev/null || true
+              unzip -o -q logs.zip 2>/dev/null || true
+              # Zip enthält u. U. .txt/.log in Root oder in Unterordnern; alle extrahierten Dateien zusammensetzen
+              find . -type f ! -name "*.zip" 2>/dev/null | sort -V | while read -r f; do
+                echo "--- ${f} ---" >> staging-job-logs.txt
+                cat "$f" 2>/dev/null >> staging-job-logs.txt
+                echo "" >> staging-job-logs.txt
+              done
             fi
           fi
           [ -s staging-job-logs.txt ] || echo "Keine Logs verfügbar." > staging-job-logs.txt

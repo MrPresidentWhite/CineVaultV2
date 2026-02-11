@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import Link from "next/link";
 import type { Status, Priority, MediaType } from "@/generated/prisma/enums";
 
@@ -476,12 +476,13 @@ export function ImportMoviesClient({
                 >
                   <div className="h-16 w-11 shrink-0 overflow-hidden rounded-md bg-ring">
                     {img ? (
-                      <Image
+                      <SkeletonImage
                         src={img}
                         alt={r.title}
                         width={74}
                         height={108}
                         className="h-full w-full object-cover"
+                        skeletonClassName="rounded-md"
                         unoptimized
                       />
                     ) : null}
@@ -626,12 +627,13 @@ export function ImportMoviesClient({
                         >
                           <div className="h-20 w-14 shrink-0 overflow-hidden rounded-md bg-ring">
                             {part.posterUrl ? (
-                              <Image
+                              <SkeletonImage
                                 src={part.posterUrl}
                                 alt={part.title}
                                 width={74}
                                 height={108}
                                 className="h-full w-full object-cover"
+                                skeletonClassName="rounded-md"
                                 unoptimized
                               />
                             ) : null}
@@ -889,21 +891,23 @@ export function ImportMoviesClient({
                 <div className="w-full max-w-[200px] shrink-0">
                   <div className="overflow-hidden rounded-lg border border-ring bg-ring">
                     {current.posterUrl ? (
-                      <Image
+                      <SkeletonImage
                         src={current.posterUrl}
                         alt={current.title}
                         width={200}
                         height={300}
                         className="h-full w-full object-cover"
+                        skeletonClassName="rounded-lg"
                         unoptimized={current.posterUrl.startsWith("http")}
                       />
                     ) : current.backdropUrl ? (
-                      <Image
+                      <SkeletonImage
                         src={current.backdropUrl}
                         alt={current.title}
                         width={200}
                         height={112}
                         className="h-full w-full object-cover"
+                        skeletonClassName="rounded-lg"
                         unoptimized={current.backdropUrl.startsWith("http")}
                       />
                     ) : (

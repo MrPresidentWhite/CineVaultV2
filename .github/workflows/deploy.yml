@@ -1,6 +1,6 @@
 # Deploy CineVault V2 per SSH: Git Pull + deploy.sh (PM2)
 # Wird nur ausgelöst, wenn der Staging-Workflow erfolgreich durchgelaufen ist (workflow_run).
-# Secrets: SSH_HOST, SSH_USER, SSH_PORT, SSH_KEY, APP_DIR (optional, Default /opt/CineVaultV2)
+# Secrets: SSH_HOST, SSH_USER, SSH_PORT, SSH_KEY, APP_DIR (optional), DISCORD_STAGING_WEBHOOK
 
 name: Deploy
 
@@ -41,3 +41,17 @@ jobs:
           command -v dos2unix >/dev/null 2>&1 && dos2unix -q deploy.sh 2>/dev/null || true
           APP_DIR="${APP_DIR}" bash ./deploy.sh
           EOF
+
+      - name: Discord – Deploy erfolgreich
+        if: success()
+        env:
+          DEPLOY_SUCCESS: "true"
+          DISCORD_STAGING_WEBHOOK: ${{ secrets.DISCORD_STAGING_WEBHOOK }}
+        run: node scripts/deploy-discord.mjs
+
+      - name: Discord – Deploy fehlgeschlagen
+        if: failure()
+        env:
+          DEPLOY_SUCCESS: "false"
+          DISCORD_STAGING_WEBHOOK: ${{ secrets.DISCORD_STAGING_WEBHOOK }}
+        run: node scripts/deploy-discord.mjs

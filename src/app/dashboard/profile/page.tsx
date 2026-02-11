@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { toPublicUrl } from "@/lib/storage";
@@ -47,11 +47,12 @@ export default async function DashboardProfilePage() {
       >
         {bannerUrl ? (
           <div className="relative h-32 sm:h-40">
-            <Image
+            <SkeletonImage
               src={bannerUrl}
               alt=""
               fill
               className="object-cover"
+              containerClassName="absolute inset-0"
               unoptimized={bannerUrl.startsWith("http")}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-panel to-transparent" />
@@ -65,12 +66,13 @@ export default async function DashboardProfilePage() {
         <div className="relative flex flex-col sm:flex-row gap-6 p-6 -mt-12 sm:-mt-16">
           <div className="shrink-0 w-24 h-24 rounded-full border-4 border-panel bg-panel overflow-hidden shadow-xl">
             {avatarUrl ? (
-              <Image
+              <SkeletonImage
                 src={avatarUrl}
                 alt={user.name}
                 width={96}
                 height={96}
                 className="w-full h-full object-cover"
+                skeletonClassName="rounded-full"
                 unoptimized={avatarUrl.startsWith("http")}
               />
             ) : (
