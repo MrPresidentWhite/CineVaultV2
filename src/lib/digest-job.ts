@@ -4,6 +4,7 @@
  * Läuft z. B. um 10:00 und 21:00 (Cron).
  */
 
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import {
@@ -21,6 +22,9 @@ const DIGEST_WINDOW_HOURS = 12;
 const STEP_BURST_MINUTES = 5;
 /** Max. Schritte pro Film (danach 1, 2, "...", n-1, n) */
 const MAX_STEPS = 7;
+
+/** Tage: „Im Browser öffnen“-Link gültig */
+const VIEW_IN_BROWSER_DAYS = 7;
 
 const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED"];
 const DISCORD_TITLES: Partial<
@@ -291,6 +295,8 @@ export async function sendStatusDigestJob(): Promise<void> {
       },
     });
 
+    let sentCount = 0;
+    let errorCount = 0;
     for (const user of users) {
       const userStatuses = user.statusPreferences.map((p: { status: Status }) => p.status);
       if (userStatuses.length === 0) continue;
@@ -299,21 +305,39 @@ export async function sendStatusDigestJob(): Promise<void> {
       );
       if (relevantSummaries.length === 0) continue;
       try {
+        const token = randomBytes(24).toString("base64url");
+        const expiresAt = new Date(now.getTime() + VIEW_IN_BROWSER_DAYS * 24 * 60 * 60 * 1000);
+        const viewInBrowserUrl = `${APP_URL.replace(/\/+$/, "")}/digest/view/${token}`;
+
         const html = renderMovieNotificationHtml(
           { name: user.name, email: user.email },
           relevantSummaries,
           APP_URL,
-          publicUrl
+          publicUrl,
+          viewInBrowserUrl
         );
+
+        await prisma.digestViewToken.create({
+          data: { token, html, userId: user.id, expiresAt },
+        });
+
         await sendEmail({
           to: user.email,
           subject: `CineVault • Es wurden ${relevantSummaries.length} Film${relevantSummaries.length === 1 ? "" : "e"} aktualisiert.`,
           html,
         });
-        console.log(`[digest] Mail gesendet an ${user.email}`);
+        sentCount++;
       } catch (err) {
-        console.error(`[digest] Mail-Fehler an ${user.email}:`, err);
+        errorCount++;
+        console.error("[digest] Mail-Fehler bei einem Empfänger:", err);
       }
+    }
+    if (sentCount > 0) {
+      console.log(
+        `[digest] Erfolgreich an ${sentCount} User gesendet${errorCount > 0 ? `, ${errorCount} Fehler` : ""}`
+      );
+    } else if (errorCount > 0) {
+      console.error(`[digest] Alle ${errorCount} Versandversuche fehlgeschlagen`);
     }
   }
 
@@ -331,4 +355,12 @@ export async function sendStatusDigestJob(): Promise<void> {
   } else {
     console.log("[digest] Keine Changes zum Verarbeiten");
   }
+}
+
+/** Abgelaufene „Im Browser öffnen“-Tokens löschen. Wird per Cron täglich ausgeführt. */
+export async function cleanupExpiredDigestViewTokens(): Promise<number> {
+  const result = await prisma.digestViewToken.deleteMany({
+    where: { expiresAt: { lt: new Date() } },
+  });
+  return result.count;
 }

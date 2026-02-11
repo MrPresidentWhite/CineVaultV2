@@ -129,7 +129,9 @@ export function renderMovieNotificationHtml(
   user: DigestUser,
   summaries: DigestSummary[],
   appUrl: string,
-  publicUrl: (key: string) => string
+  publicUrl: (key: string) => string,
+  /** Wenn gesetzt: Link „Im Browser öffnen“ anzeigen (gleiche Inhalte wie E-Mail). */
+  viewInBrowserUrl?: string
 ): string {
   const userName = user.name?.trim() || user.email;
   // PNG von CDN (uploads/assets/logo-big.png); Fallback auf App-Static oder Text
@@ -181,6 +183,12 @@ body { margin:0; padding:0; font-family:Arial,Helvetica,sans-serif; background:$
 a { color:${styles.gold}; }
 img { border:0; }
 `;
+  const viewInBrowserBar = viewInBrowserUrl
+    ? `<tr><td align="center" style="padding:8px 16px;background:${styles.ring};font-size:12px;color:${styles.textDim};">
+  E-Mail wird nicht richtig angezeigt? <a href="${esc(viewInBrowserUrl)}" style="color:${styles.gold};text-decoration:underline;">Im Browser öffnen</a>
+</td></tr>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -194,6 +202,7 @@ img { border:0; }
 </head>
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:${styles.bg};color:${styles.text};line-height:1.5;font-size:15px;-webkit-text-size-adjust:100%;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${styles.bg};">
+    ${viewInBrowserBar}
     <tr><td align="center" style="padding:16px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="660" style="max-width:660px;">
         <tr><td style="text-align:center;padding-bottom:28px;">

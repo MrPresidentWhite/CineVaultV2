@@ -1,8 +1,10 @@
 /**
  * Next.js Instrumentation – läuft einmal beim Start des Node-Servers.
  * Setzt Prozess-Zeitzone auf Europe/Berlin (unabhängig von Server-TZ).
+ * Fügt Timestamps zu allen console-Ausgaben hinzu (Log-Dateien nachvollziehbar).
  * Registriert node-cron-Jobs nur in Production:
  * - Session-Cleanup täglich 3:00 Uhr
+ * - Digest-View-Token-Cleanup (abgelaufene „Im Browser öffnen“-Links) täglich 3:05 Uhr
  * - Status-Digest (E-Mail + Discord) täglich 10:00 und 21:00 Uhr
  * - Status-Scheduled (VÖ: Demnächst → Auf Wunschliste) täglich 6:00 Uhr
  * - CDN-Warmup alle N Minuten (wenn WARMUP_ENABLED=1)
@@ -10,6 +12,29 @@
 
 const APP_TZ = "Europe/Berlin";
 process.env.TZ = APP_TZ;
+
+function timestamp(): string {
+  return new Date().toLocaleString("de-DE", {
+    timeZone: APP_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function patchConsoleWithTimestamps(): void {
+  const methods = ["log", "info", "warn", "error", "debug"] as const;
+  for (const method of methods) {
+    const orig = console[method].bind(console);
+    console[method] = (...args: unknown[]) => {
+      orig(`[${timestamp()}]`, ...args);
+    };
+  }
+}
 
 function isProduction(): boolean {
   if (process.env.NODE_ENV !== "production") return false;
@@ -19,6 +44,8 @@ function isProduction(): boolean {
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  patchConsoleWithTimestamps();
   if (!isProduction()) return;
 
   const cron = await import("node-cron");
@@ -33,6 +60,22 @@ export async function register() {
         console.log(`[cron] Session-Cleanup: ${deleted} abgelaufene Sessions gelöscht`);
       } catch (e) {
         console.error("[cron] Session-Cleanup fehlgeschlagen:", e);
+      }
+    },
+    opts
+  );
+
+  cron.default.schedule(
+    "5 3 * * *",
+    async () => {
+      try {
+        const { cleanupExpiredDigestViewTokens } = await import("@/lib/digest-job");
+        const deleted = await cleanupExpiredDigestViewTokens();
+        if (deleted > 0) {
+          console.log(`[cron] Digest-View-Token-Cleanup: ${deleted} abgelaufene Tokens gelöscht`);
+        }
+      } catch (e) {
+        console.error("[cron] Digest-View-Token-Cleanup fehlgeschlagen:", e);
       }
     },
     opts

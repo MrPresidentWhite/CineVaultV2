@@ -360,9 +360,10 @@ model User {
   movieStatusChanges   MovieStatusChange[]
   statusPreferences    UserStatusPreference[]
 
-  apiKeys        ApiKey[]
-  backupCodes    UserBackupCode[]
-  trustedDevices TrustedDevice[]
+  apiKeys           ApiKey[]
+  backupCodes       UserBackupCode[]
+  trustedDevices    TrustedDevice[]
+  digestViewTokens  DigestViewToken[]
 }
 
 /// 2FA-Backup-Codes: einmal verwendbar, gehasht gespeichert.
@@ -486,6 +487,21 @@ model MovieStatusChange {
   @@index([changedAt])
   @@index([movieId, changedAt])
   @@index([delivered])
+}
+
+/// Token für „E-Mail im Browser anzeigen“ – pro versendeter Digest-Mail.
+model DigestViewToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(48)
+  html      String   @db.Text
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("digest_view_tokens")
 }
 
 // --- Labels ---
