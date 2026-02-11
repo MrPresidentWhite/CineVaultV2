@@ -12,6 +12,7 @@ type HeaderProps = {
 
 export function Header({ user }: HeaderProps) {
   const pathname = usePathname();
+  if (pathname?.startsWith("/api-docs")) return null;
   const isLoginPage = pathname === "/login";
 
   return (

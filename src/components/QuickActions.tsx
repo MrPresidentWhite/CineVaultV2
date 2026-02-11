@@ -10,7 +10,7 @@ type QuickActionsProps = {
 
 export function QuickActions({ items }: QuickActionsProps) {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname?.startsWith("/dashboard")) return null;
+  if (pathname === "/login" || pathname?.startsWith("/dashboard") || pathname?.startsWith("/api-docs")) return null;
   if (items.length === 0) return null;
 
   return (
