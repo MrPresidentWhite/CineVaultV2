@@ -152,11 +152,20 @@ export async function POST(request: Request) {
   }
 
   let codeValid = false;
-  // TOTP-Branch: Eingabe normalisieren (Unicode-Ziffern, z. B. iOS-Autofill) vor Regex-Check
+  // TOTP-Branch: Eingabe normalisieren (Unicode, unsichtbare Zeichen) vor Regex-Check
   const totpCode = normalizeTotpInput(code);
-  if (/^\d{6}$/.test(totpCode)) {
+  const isTotpFormat = /^\d{6}$/.test(totpCode);
+  const debug2fa = process.env.LOG_2FA_DEBUG === "1";
+  if (debug2fa) {
+    const changed = code !== totpCode;
+    console.log(
+      `[2fa] userId=${payload.userId} contentType=${contentType.slice(0, 30)} rawLen=${code.length} normLen=${totpCode.length} changed=${changed} isTotp=${isTotpFormat}`
+    );
+  }
+  if (isTotpFormat) {
     const secret = decryptTotpSecret(user.totpSecretEncrypted ?? "");
     codeValid = secret ? await verifyTotpToken(totpCode, secret) : false;
+    if (debug2fa) console.log(`[2fa] verifyResult=${codeValid}`);
   } else {
     const hash = hashBackupCode(code);
     const backup = await prisma.userBackupCode.findFirst({

@@ -30,22 +30,23 @@ export function getTotpKeyUri(secret: string, email: string, issuer: string): st
   return generateURI({ issuer, label: email, secret });
 }
 
+/** Unsichtbare Zeichen, die Autofill/Password-Manager beim Einfügen anhängen können */
+const INVISIBLE_CHARS = /[\s\u200B-\u200D\uFEFF\u2060\u00AD]/g;
+
 /**
- * Normalisiert TOTP-Eingabe: Leerzeichen entfernen, Unicode-Ziffern (z. B. Vollbreite,
- * iOS-Autofill) in ASCII 0–9 umwandeln. Reduziert "ungültiger Code" auf Mobile.
- * Exportiert für Verwendung in der 2FA-Route vor dem Regex-Check.
+ * Normalisiert TOTP-Eingabe für Mobile: unsichtbare Zeichen entfernen,
+ * erste 6 Ziffern extrahieren (Unicode → ASCII). Behandelt Autofill-Artefakte.
  */
 export function normalizeTotpInput(raw: string): string {
-  const s = raw.replace(/\s/g, "");
-  if (s.length !== 6) return s;
+  const s = raw.replace(INVISIBLE_CHARS, "");
   let out = "";
-  for (let i = 0; i < 6; i++) {
-    const c = s[i]!;
+  for (const c of s) {
     const num = parseInt(c, 10);
-    if (!Number.isNaN(num) && num >= 0 && num <= 9) out += String(num);
-    else return s;
+    if (!Number.isNaN(num) && num >= 0 && num <= 9 && out.length < 6) {
+      out += String(num);
+    }
   }
-  return out;
+  return out.length === 6 ? out : raw;
 }
 
 /** Prüft einen 6-stelligen TOTP-Code (mit Toleranz-Fenster ±30s für Mobile-Uhren). Async (otplib v13). */
