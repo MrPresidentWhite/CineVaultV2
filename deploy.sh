@@ -113,6 +113,10 @@ else
 fi
 echo "[deploy] next build..."
 "$NPM_BIN" run -s build
+# .env für Standalone-Server (cwd = .next/standalone)
+if [ -f .env ] && [ -d .next/standalone ]; then
+  cp .env .next/standalone/.env
+fi
 # --------------------------------------------------------------
 
 # ----------------- PM2: ein Block, restart (kein prune) ---------
