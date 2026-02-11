@@ -116,25 +116,17 @@ export async function POST(request: Request) {
       throw new Error("TMDb-Details nicht gefunden");
     }
 
-    // Collection erst bei 2. Film anlegen; ersten Film ohne Collection speichern, beim zweiten nachträglich verknüpfen
+    // Collection: immer verknüpfen falls Film zu einer gehört (bestehende Collection nutzen oder anlegen)
     let collectionId: number | null = null;
     let collectionPartTmdbIds: number[] = [];
     if (d.belongs_to_collection?.id) {
       const collTmdbId = d.belongs_to_collection.id;
       const col = await getCollectionDetails(collTmdbId).catch(() => null);
       collectionPartTmdbIds = col?.parts?.map((p) => p.id) ?? [];
-      const existingInCollectionCount = await prisma.movie.count({
-        where: {
-          tmdbId: { in: collectionPartTmdbIds },
-          collectionId: null,
-        },
-      });
-      if (existingInCollectionCount >= 1) {
-        collectionId = await getOrCreateCollectionByTmdbId(
-          collTmdbId,
-          (p, msg) => onProgress?.(p * 0.2, msg)
-        );
-      }
+      collectionId = await getOrCreateCollectionByTmdbId(
+        collTmdbId,
+        (p, msg) => onProgress?.(p * 0.2, msg)
+      );
     }
 
     const year = d.release_date
