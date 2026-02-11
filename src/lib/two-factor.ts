@@ -30,13 +30,34 @@ export function getTotpKeyUri(secret: string, email: string, issuer: string): st
   return generateURI({ issuer, label: email, secret });
 }
 
-/** Prüft einen 6-stelligen TOTP-Code (mit Toleranz-Fenster). Async (otplib v13). */
+/**
+ * Normalisiert TOTP-Eingabe: Leerzeichen entfernen, Unicode-Ziffern (z. B. Vollbreite,
+ * iOS-Autofill) in ASCII 0–9 umwandeln. Reduziert "ungültiger Code" auf Mobile.
+ */
+function normalizeTotpInput(raw: string): string {
+  let s = raw.replace(/\s/g, "");
+  if (s.length !== 6) return s;
+  const out: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0x30 && c <= 0x39) out.push(s[i]!);
+    else if (c >= 0xff10 && c <= 0xff19) out.push(String.fromCharCode(0x30 + (c - 0xff10)));
+    else return s;
+  }
+  return out.join("");
+}
+
+/** Prüft einen 6-stelligen TOTP-Code (mit Toleranz-Fenster ±30s für Mobile-Uhren). Async (otplib v13). */
 export async function verifyTotpToken(token: string, secret: string): Promise<boolean> {
   if (!token?.trim() || !secret?.trim()) return false;
-  const cleaned = token.replace(/\s/g, "");
+  const cleaned = normalizeTotpInput(token.trim());
   if (!/^\d{6}$/.test(cleaned)) return false;
   try {
-    const result = await verify({ secret, token: cleaned });
+    const result = await verify({
+      secret,
+      token: cleaned,
+      epochTolerance: 30,
+    });
     return result.valid;
   } catch {
     return false;
