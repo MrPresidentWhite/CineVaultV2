@@ -26,10 +26,12 @@ jobs:
           fetch-depth: 1
 
       - name: Artifact laden (next-standalone)
-        uses: actions/download-artifact@v4
+        uses: dawidd6/action-download-artifact@v3
         with:
-          run-id: ${{ github.event.workflow_run.id }}
+          workflow: staging.yml
+          run_id: ${{ github.event.workflow_run.id }}
           name: next-standalone
+          path: next-standalone
 
       - name: Deploy via SSH (Artifact + deploy.sh)
         env:

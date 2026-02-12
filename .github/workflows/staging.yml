@@ -1,4 +1,4 @@
-# Staging: Lint, Tests, Build → Staging-Report (Grok + Discord) → bei Erfolg wird Deploy getriggert
+# Staging: Lint + Test parallel, dann Build → Staging-Report (Grok + Discord) → bei Erfolg wird Deploy getriggert
 # Läuft bei Push auf main. Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
 # "Abgebrochen" ohne Fehlermeldung: oft ein älterer Lauf, der durch concurrency abgebrochen wurde
 # (neuer Push = neuer Lauf, vorheriger wird cancelled). Im Actions-Tab den neuesten Lauf prüfen.
@@ -14,35 +14,29 @@ concurrency:
   group: staging-main
   cancel-in-progress: true
 
+env:
+  SESSION_SECRET: "ci-build-placeholder-not-used-at-runtime"
+  DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+
 jobs:
-  staging:
+  lint:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # write für actions/cache (Speichern des Caches; inkl. Lesen)
       actions: write
-    env:
-      # Nur für CI-Build: src/lib/env.ts verlangt in Prod SESSION_SECRET und getDatabaseUrl() DB-Config.
-      # Echte Prod nutzt Secrets aus der Server-.env; hier reichen Platzhalter (kein echter DB-Zugriff).
-      SESSION_SECRET: "ci-build-placeholder-not-used-at-runtime"
-      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
-      # Denselben Key wie auf dem Server verwenden (Artifact-Deploy, verhindert Server-Action-Fehler).
-      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Cache node_modules
+      - uses: actions/cache@v4
         id: node-cache
-        uses: actions/cache@v4
         with:
           path: node_modules
           key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -56,15 +50,6 @@ jobs:
       - name: Prisma generate
         run: npm run db:generate
 
-      - name: Cache Next.js build
-        id: next-cache
-        uses: actions/cache@v4
-        with:
-          path: .next/cache
-          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'prisma/schema.prisma', 'next.config.ts', 'tsconfig.json') }}
-          restore-keys: |
-            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
-
       - name: Lint
         id: lint
         continue-on-error: true
@@ -72,12 +57,110 @@ jobs:
           npm run lint 2>&1 | tee lint.txt
           exit ${PIPESTATUS[0]}
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lint-output
+          path: lint.txt
+
+      - name: Lint-Fehler durchreichen
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
+
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - uses: actions/cache@v4
+        id: node-cache
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Prisma generate
+        run: npm run db:generate
+
       - name: Test
         id: test
         continue-on-error: true
         run: |
           npm test 2>&1 | tee test.txt
           exit ${PIPESTATUS[0]}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test.txt
+
+      - name: Test-Fehler durchreichen
+        if: steps.test.outcome == 'failure'
+        run: exit 1
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: always() && (needs.lint.result != 'cancelled' && needs.test.result != 'cancelled')
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: lint-output
+          path: .
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: test-output
+          path: .
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - uses: actions/cache@v4
+        id: node-cache
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Prisma generate
+        run: npm run db:generate
+
+      - uses: actions/cache@v4
+        id: next-cache
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'prisma/schema.prisma', 'next.config.ts', 'tsconfig.json') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Build
         id: build
@@ -103,19 +186,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p _joblogs && cd _joblogs
-          # Job-ID: erster Job (Staging hat nur einen Job)
           JOBS_JSON=$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs")
-          JOB_ID=$(echo "$JOBS_JSON" | jq -r '.jobs[0].id // empty')
+          JOB_ID=$(echo "$JOBS_JSON" | jq -r '.jobs[] | select(.name == "build") | .id // empty' | head -1)
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
+            JOB_ID=$(echo "$JOBS_JSON" | jq -r '.jobs[0].id // empty')
+          fi
           if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
             echo "Job-ID nicht gefunden." > staging-job-logs.txt
           else
-            # API liefert 302 → Zip; mit -L redirect folgen
             curl -sSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/actions/jobs/${JOB_ID}/logs" -o logs.zip
             if [ -f logs.zip ] && [ -s logs.zip ]; then
               unzip -o -q logs.zip 2>/dev/null || true
-              # Zip enthält u. U. .txt/.log in Root oder in Unterordnern; alle extrahierten Dateien zusammensetzen
               find . -type f ! -name "*.zip" 2>/dev/null | sort -V | while read -r f; do
                 echo "--- ${f} ---" >> staging-job-logs.txt
                 cat "$f" 2>/dev/null >> staging-job-logs.txt
@@ -129,8 +212,8 @@ jobs:
       - name: Staging-Report an Discord (mit Grok + Log-Anhang)
         if: always()
         env:
-          LINT_OUTCOME: ${{ steps.lint.outcome }}
-          TEST_OUTCOME: ${{ steps.test.outcome }}
+          LINT_OUTCOME: ${{ needs.lint.result }}
+          TEST_OUTCOME: ${{ needs.test.result }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           LOGGING_CHECK_OUTCOME: ${{ steps.logging-check.outcome }}
           DISCORD_STAGING_WEBHOOK: ${{ secrets.DISCORD_STAGING_WEBHOOK }}
@@ -140,7 +223,7 @@ jobs:
         run: node scripts/staging-report-discord.mjs lint.txt test.txt build.txt logging-check.txt staging-job-logs.txt
 
       - name: Staging fehlgeschlagen
-        if: always() && (steps.lint.outcome == 'failure' || steps.test.outcome == 'failure' || steps.build.outcome == 'failure' || steps.logging-check.outcome == 'failure')
+        if: always() && (needs.lint.result == 'failure' || needs.test.result == 'failure' || steps.build.outcome == 'failure' || steps.logging-check.outcome == 'failure')
         run: |
           echo "Mindestens ein Check (Lint/Tests/Build/Logging-Check) ist fehlgeschlagen. Kein Deployment."
           exit 1
