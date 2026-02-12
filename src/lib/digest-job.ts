@@ -192,6 +192,10 @@ export async function sendStatusDigestJob(): Promise<void> {
   const windowStart = new Date(
     now.getTime() - DIGEST_WINDOW_HOURS * 60 * 60 * 1000
   );
+  /** Discord: aktuelle + vorherige 12h-Periode (Catch-up für fehlgeschlagene Jobs) */
+  const discordWindowStart = new Date(
+    now.getTime() - 2 * DIGEST_WINDOW_HOURS * 60 * 60 * 1000
+  );
 
   // 1. Änderungen der letzten 12h für E-Mails
   const recentChanges = await prisma.movieStatusChange.findMany({
@@ -220,9 +224,12 @@ export async function sendStatusDigestJob(): Promise<void> {
     orderBy: { changedAt: "asc" },
   });
 
-  // 2. Alle undelivered Changes für Discord (unabhängig von Zeit)
+  // 2. Undelivered Changes für Discord: aktuelle + vorherige 12h-Periode
   const openChanges = await prisma.movieStatusChange.findMany({
-    where: { delivered: false },
+    where: {
+      changedAt: { gte: discordWindowStart, lte: now },
+      delivered: false,
+    },
     select: {
       id: true,
       movieId: true,
