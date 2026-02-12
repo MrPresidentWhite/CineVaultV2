@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS-Script, require ist hier Standard */
 /**
  * Wrapper für den Next.js Standalone-Server.
  * Lädt .env aus dem Projekt-Root, damit NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
