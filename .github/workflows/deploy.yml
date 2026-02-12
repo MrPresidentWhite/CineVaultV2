@@ -1,5 +1,6 @@
-# Deploy CineVault V2 per SSH: Git Pull + deploy.sh (PM2)
+# Deploy CineVault V2 per SSH: Artifact aus Staging + deploy.sh (PM2)
 # Wird nur ausgelöst, wenn der Staging-Workflow erfolgreich durchgelaufen ist (workflow_run).
+# Nutzt Build-Artifact aus Staging statt Rebuild auf dem Server (~30–60s schneller).
 # Secrets: SSH_HOST, SSH_USER, SSH_PORT, SSH_KEY, APP_DIR (optional), DISCORD_STAGING_WEBHOOK
 
 name: Deploy
@@ -14,6 +15,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      actions: read  # Artifact vom Staging-Workflow laden
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,7 +25,13 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 1
 
-      - name: Deploy via SSH
+      - name: Artifact laden (next-standalone)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          name: next-standalone
+
+      - name: Deploy via SSH (Artifact + deploy.sh)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -29,18 +39,16 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           APP_DIR: ${{ secrets.APP_DIR }}
         run: |
+          APP_DIR="${APP_DIR:-/opt/CineVaultV2}"
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
-          ssh -i key.pem -p "${SSH_PORT:-22}" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
-            "APP_DIR='${APP_DIR:-/opt/CineVaultV2}' bash -s" << 'EOF'
-          set -euo pipefail
-          cd "${APP_DIR:?APP_DIR fehlt}"
-          git fetch --all --prune
-          git reset --hard "origin/main"
-          chmod +x deploy.sh 2>/dev/null || true
-          command -v dos2unix >/dev/null 2>&1 && dos2unix -q deploy.sh 2>/dev/null || true
-          APP_DIR="${APP_DIR}" bash ./deploy.sh
-          EOF
+          SSH_OPTS="-i key.pem -p ${SSH_PORT:-22} -o StrictHostKeyChecking=no"
+          # 1. Server: git pull, Verzeichnis vorbereiten
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" "cd '$APP_DIR' && git fetch --all --prune && git reset --hard origin/main && mkdir -p .next/standalone"
+          # 2. Artifact vom Runner zum Server kopieren (rsync inkl. versteckter Dateien wie .next)
+          rsync -avz -e "ssh $SSH_OPTS" next-standalone/ "$SSH_USER@$SSH_HOST:$APP_DIR/.next/standalone/"
+          # 3. deploy.sh mit SKIP_BUILD (kein Rebuild, Artifact nutzen)
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" "cd '$APP_DIR' && chmod +x deploy.sh 2>/dev/null || true && command -v dos2unix >/dev/null 2>&1 && dos2unix -q deploy.sh 2>/dev/null || true; APP_DIR='$APP_DIR' SKIP_BUILD=1 bash ./deploy.sh"
 
       - name: Discord – Deploy erfolgreich
         if: success()

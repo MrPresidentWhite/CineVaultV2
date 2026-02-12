@@ -104,18 +104,23 @@ ${PRISMA_BIN} migrate deploy
 # --------------------------------------------------------------
 
 # ----------------- Next.js Build ---------------------------------
-# .next/cache erhalten für schnellere Rebuilds; Rest von .next löschen (vermeidet Server-Action-Mismatch)
-if [ -d .next ]; then
-  echo "[deploy] clean .next (behalte .next/cache)"
-  find .next -mindepth 1 -maxdepth 1 ! -name cache -exec rm -rf {} + 2>/dev/null || true
+# SKIP_BUILD=1: Artifact aus CI nutzen (bereits via rsync deployed), kein Rebuild
+if [ -n "${SKIP_BUILD:-}" ]; then
+  echo "[deploy] next build (skip, Artifact aus CI)"
 else
-  echo "[deploy] .next neu"
-fi
-echo "[deploy] next build..."
-"$NPM_BIN" run -s build
-# .env für Standalone-Server (cwd = .next/standalone)
-if [ -f .env ] && [ -d .next/standalone ]; then
-  cp .env .next/standalone/.env
+  # .next/cache erhalten für schnellere Rebuilds; Rest von .next löschen (vermeidet Server-Action-Mismatch)
+  if [ -d .next ]; then
+    echo "[deploy] clean .next (behalte .next/cache)"
+    find .next -mindepth 1 -maxdepth 1 ! -name cache -exec rm -rf {} + 2>/dev/null || true
+  else
+    echo "[deploy] .next neu"
+  fi
+  echo "[deploy] next build..."
+  "$NPM_BIN" run -s build
+  # .env für Standalone-Server (cwd = .next/standalone) – bei SKIP_BUILD lädt start-standalone.cjs aus Projekt-Root
+  if [ -f .env ] && [ -d .next/standalone ]; then
+    cp .env .next/standalone/.env
+  fi
 fi
 # --------------------------------------------------------------
 

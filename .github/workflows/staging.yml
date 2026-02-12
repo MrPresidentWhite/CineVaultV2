@@ -2,7 +2,7 @@
 # Läuft bei Push auf main. Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
 # "Abgebrochen" ohne Fehlermeldung: oft ein älterer Lauf, der durch concurrency abgebrochen wurde
 # (neuer Push = neuer Lauf, vorheriger wird cancelled). Im Actions-Tab den neuesten Lauf prüfen.
-# Secrets: DISCORD_STAGING_WEBHOOK, GROK_API_URL, GROK_API_KEY, GROK_API_MODEL
+# Secrets: DISCORD_STAGING_WEBHOOK, GROK_API_URL, GROK_API_KEY, GROK_API_MODEL, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 
 name: Staging
 
@@ -26,6 +26,8 @@ jobs:
       # Echte Prod nutzt Secrets aus der Server-.env; hier reichen Platzhalter (kein echter DB-Zugriff).
       SESSION_SECRET: "ci-build-placeholder-not-used-at-runtime"
       DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      # Denselben Key wie auf dem Server verwenden (Artifact-Deploy, verhindert Server-Action-Fehler).
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,6 +84,13 @@ jobs:
         run: |
           npm run build 2>&1 | tee build.txt
           exit ${PIPESTATUS[0]}
+
+      - name: Artifact hochladen (next-standalone)
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-standalone
+          path: .next/standalone
 
       - name: Logging-Check (keine Secrets in Logs, v2 Abschnitt 15.3)
         id: logging-check
