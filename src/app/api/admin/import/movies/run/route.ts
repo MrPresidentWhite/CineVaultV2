@@ -17,6 +17,7 @@ import {
 import { getAccentFromBuffer } from "@/lib/accent";
 import { mapTmdbGenresToEnum } from "@/lib/tmdb-genres";
 import { getOrCreateCollectionByTmdbId } from "@/lib/collection-tmdb";
+import { validateSizeBeforeWhenSizeAfter } from "@/lib/movie-size-validation";
 
 function mapDeCertificationToFsk(cert?: string | null): number | null {
   if (!cert) return null;
@@ -174,15 +175,8 @@ export async function POST(request: Request) {
         ? BigInt(single.sizeAfterBytes.trim())
         : null;
 
-    if (
-      sizeAfter != null &&
-      sizeAfter > BigInt(0) &&
-      (sizeBefore == null || sizeBefore <= BigInt(0))
-    ) {
-      throw new Error(
-        `"${d.title}": Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.`
-      );
-    }
+    const err = validateSizeBeforeWhenSizeAfter(sizeAfter, sizeBefore);
+    if (err) throw new Error(`"${d.title}": ${err}`);
 
     const assignedId =
       typeof single.assignedToUserId === "number" &&

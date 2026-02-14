@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useRef, useEffect, useCallback } from "react";
 import type { SeriesDetailEpisode } from "@/lib/series-data";
+import {
+  hasSizeValidationError,
+  SIZE_VALIDATION_ERROR_MESSAGE,
+} from "@/lib/movie-size-validation";
 
 type Props = {
   episode: SeriesDetailEpisode;
@@ -65,8 +69,8 @@ export function EpisodeEditModal({ episode, onClose }: Props) {
     const sizeBeforeVal = (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
     const sizeAfterNum = sizeAfterVal ? Number(sizeAfterVal) : 0;
     const sizeBeforeNum = sizeBeforeVal ? Number(sizeBeforeVal) : 0;
-    if (sizeAfterNum > 0 && sizeBeforeNum <= 0) {
-      alert("Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.");
+    if (hasSizeValidationError(sizeAfterNum, sizeBeforeNum)) {
+      alert(SIZE_VALIDATION_ERROR_MESSAGE);
       return;
     }
 

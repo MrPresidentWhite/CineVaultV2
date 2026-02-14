@@ -6,6 +6,10 @@ import type { MovieDetail } from "@/lib/movie-data";
 import { statusLabels, USER_SELECTABLE_STATUSES } from "@/lib/enum-mapper";
 import { priorityLabels } from "@/lib/enum-mapper";
 import { mediaTypeLabels } from "@/lib/enum-mapper";
+import {
+  hasSizeValidationError,
+  SIZE_VALIDATION_ERROR_MESSAGE,
+} from "@/lib/movie-size-validation";
 import type { Status, Priority, MediaType } from "@/generated/prisma/enums";
 
 const KNOWN_QUALITIES = ["720p", "1080p", "1440p", "2160p"] as const;
@@ -87,8 +91,8 @@ export function MovieEditModal({ movie, users }: Props) {
     const sizeBeforeVal = (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
     const sizeAfterNum = sizeAfterVal ? Number(sizeAfterVal) : 0;
     const sizeBeforeNum = sizeBeforeVal ? Number(sizeBeforeVal) : 0;
-    if (sizeAfterNum > 0 && sizeBeforeNum <= 0) {
-      alert("Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.");
+    if (hasSizeValidationError(sizeAfterNum, sizeBeforeNum)) {
+      alert(SIZE_VALIDATION_ERROR_MESSAGE);
       return;
     }
 

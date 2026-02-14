@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import {
+  hasSizeValidationError,
+  SIZE_VALIDATION_ERROR_MESSAGE,
+} from "@/lib/movie-size-validation";
 import { SkeletonImage } from "@/components/ui/SkeletonImage";
 import Link from "next/link";
 import type { Status, Priority, MediaType } from "@/generated/prisma/enums";
@@ -260,9 +264,9 @@ export function ImportMoviesClient({
           }
           const sa = opts.sizeAfter ? Number(opts.sizeAfter) : 0;
           const sb = opts.sizeBefore ? Number(opts.sizeBefore) : 0;
-          if (sa > 0 && sb <= 0) {
+          if (hasSizeValidationError(sa, sb)) {
             setError(
-              `Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein (Film: "${p.title}").`
+              `${SIZE_VALIDATION_ERROR_MESSAGE} (Film: "${p.title}")`
             );
             setProgressMsg(null);
             setRunning(false);
@@ -300,8 +304,8 @@ export function ImportMoviesClient({
           setProgressMsg(null);
           return;
         }
-        if (sizeAfter && Number(sizeAfter) > 0 && (!sizeBefore || Number(sizeBefore) <= 0)) {
-          setError("Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.");
+        if (hasSizeValidationError(Number(sizeAfter || 0), Number(sizeBefore || 0))) {
+          setError(SIZE_VALIDATION_ERROR_MESSAGE);
           setRunning(false);
           setProgressMsg(null);
           return;

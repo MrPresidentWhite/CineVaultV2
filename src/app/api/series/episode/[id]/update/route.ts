@@ -4,6 +4,7 @@ import { getAuth } from "@/lib/auth";
 import { hasEffectiveRole } from "@/lib/auth";
 import { Role as RoleEnum } from "@/generated/prisma/enums";
 import { invalidateSeriesCache } from "@/lib/series-data";
+import { validateSizeBeforeWhenSizeAfter } from "@/lib/movie-size-validation";
 
 /**
  * POST /api/series/episode/[id]/update
@@ -73,17 +74,13 @@ export async function POST(
       ? (data.sizeBeforeBytes as bigint)
       : existing.sizeBeforeBytes;
 
-  if (
-    effSizeAfter != null &&
-    effSizeAfter > BigInt(0) &&
-    (effSizeBefore == null || effSizeBefore <= BigInt(0))
-  ) {
+  const sizeValidationError = validateSizeBeforeWhenSizeAfter(
+    effSizeAfter,
+    effSizeBefore
+  );
+  if (sizeValidationError) {
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.",
-      },
+      { ok: false, error: sizeValidationError },
       { status: 400 }
     );
   }
