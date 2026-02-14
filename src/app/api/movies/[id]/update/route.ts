@@ -69,17 +69,21 @@ export async function POST(
     data.checkSum !== undefined
       ? (data.checkSum as string | null)
       : existing.checkSum;
-  const effSizeAfter =
-    data.sizeAfterBytes !== undefined ? data.sizeAfterBytes : existing.sizeAfterBytes;
-  const effSizeBefore =
-    data.sizeBeforeBytes !== undefined ? data.sizeBeforeBytes : existing.sizeBeforeBytes;
+  const effSizeAfter: bigint | null =
+    data.sizeAfterBytes !== undefined
+      ? (data.sizeAfterBytes as bigint)
+      : existing.sizeAfterBytes;
+  const effSizeBefore: bigint | null =
+    data.sizeBeforeBytes !== undefined
+      ? (data.sizeBeforeBytes as bigint)
+      : existing.sizeBeforeBytes;
 
   if (
     existing.status !== StatusEnum.ARCHIVED &&
     effCheckSum &&
     effCheckSum.trim().length > 0 &&
-    ((effSizeAfter != null && effSizeAfter > 0n) ||
-      (effSizeBefore != null && effSizeBefore > 0n))
+    ((effSizeAfter != null && effSizeAfter > BigInt(0)) ||
+      (effSizeBefore != null && effSizeBefore > BigInt(0)))
   ) {
     data.status = StatusEnum.UPLOADED;
     data.statusScheduledAt = null;
