@@ -79,6 +79,21 @@ export async function POST(
       : existing.sizeBeforeBytes;
 
   if (
+    effSizeAfter != null &&
+    effSizeAfter > BigInt(0) &&
+    (effSizeBefore == null || effSizeBefore <= BigInt(0))
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (
     existing.status !== StatusEnum.ARCHIVED &&
     effCheckSum &&
     effCheckSum.trim().length > 0 &&
