@@ -97,8 +97,8 @@ export async function POST(
     existing.status !== StatusEnum.ARCHIVED &&
     effCheckSum &&
     effCheckSum.trim().length > 0 &&
-    ((effSizeAfter != null && effSizeAfter > BigInt(0)) ||
-      (effSizeBefore != null && effSizeBefore > BigInt(0)))
+    effSizeAfter != null &&
+    effSizeAfter > BigInt(0)
   ) {
     data.status = StatusEnum.UPLOADED;
     data.statusScheduledAt = null;
