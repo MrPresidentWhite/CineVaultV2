@@ -174,6 +174,16 @@ export async function POST(request: Request) {
         ? BigInt(single.sizeAfterBytes.trim())
         : null;
 
+    if (
+      sizeAfter != null &&
+      sizeAfter > BigInt(0) &&
+      (sizeBefore == null || sizeBefore <= BigInt(0))
+    ) {
+      throw new Error(
+        `"${d.title}": Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.`
+      );
+    }
+
     const assignedId =
       typeof single.assignedToUserId === "number" &&
       Number.isFinite(single.assignedToUserId)
@@ -327,9 +337,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, id: result.id });
   } catch (e) {
     console.error("Import movies/run error:", e);
+    const msg = e instanceof Error ? e.message : "Import fehlgeschlagen";
     return NextResponse.json(
-      { ok: false, error: "Import fehlgeschlagen" },
-      { status: 500 }
+      { ok: false, error: msg },
+      { status: 400 }
     );
   }
 }

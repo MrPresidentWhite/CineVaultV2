@@ -53,14 +53,38 @@ export async function POST(
     data.sizeAfterBytes = null;
   }
 
-  const episode = await prisma.episode.findUnique({
+  const existing = await prisma.episode.findUnique({
     where: { id: idNum },
-    select: { seriesId: true },
+    select: { seriesId: true, sizeBeforeBytes: true, sizeAfterBytes: true },
   });
-  if (!episode) {
+  if (!existing) {
     return NextResponse.json(
       { ok: false, error: "Episode nicht gefunden" },
       { status: 404 }
+    );
+  }
+
+  const effSizeAfter: bigint | null =
+    data.sizeAfterBytes !== undefined
+      ? (data.sizeAfterBytes as bigint)
+      : existing.sizeAfterBytes;
+  const effSizeBefore: bigint | null =
+    data.sizeBeforeBytes !== undefined
+      ? (data.sizeBeforeBytes as bigint)
+      : existing.sizeBeforeBytes;
+
+  if (
+    effSizeAfter != null &&
+    effSizeAfter > BigInt(0) &&
+    (effSizeBefore == null || effSizeBefore <= BigInt(0))
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.",
+      },
+      { status: 400 }
     );
   }
 
@@ -69,7 +93,7 @@ export async function POST(
       where: { id: idNum },
       data: data as never,
     });
-    await invalidateSeriesCache(episode.seriesId);
+    await invalidateSeriesCache(existing.seriesId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("episode update failed:", e);

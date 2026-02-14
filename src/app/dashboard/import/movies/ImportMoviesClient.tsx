@@ -258,6 +258,16 @@ export function ImportMoviesClient({
             setRunning(false);
             return;
           }
+          const sa = opts.sizeAfter ? Number(opts.sizeAfter) : 0;
+          const sb = opts.sizeBefore ? Number(opts.sizeBefore) : 0;
+          if (sa > 0 && sb <= 0) {
+            setError(
+              `Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein (Film: "${p.title}").`
+            );
+            setProgressMsg(null);
+            setRunning(false);
+            return;
+          }
         }
 
         const moviesPayload = toImport.map((p) => ({
@@ -286,6 +296,12 @@ export function ImportMoviesClient({
       } else {
         if (!/^\d*$/.test(sizeBefore) || !/^\d*$/.test(sizeAfter)) {
           setError("Größe vorher/nachher dürfen nur Ziffern enthalten.");
+          setRunning(false);
+          setProgressMsg(null);
+          return;
+        }
+        if (sizeAfter && Number(sizeAfter) > 0 && (!sizeBefore || Number(sizeBefore) <= 0)) {
+          setError("Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.");
           setRunning(false);
           setProgressMsg(null);
           return;

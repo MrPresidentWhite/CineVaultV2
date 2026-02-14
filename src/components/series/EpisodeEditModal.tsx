@@ -60,6 +60,16 @@ export function EpisodeEditModal({ episode, onClose }: Props) {
     e.preventDefault();
     const form = formRef.current;
     if (!form) return;
+
+    const sizeAfterVal = (form.querySelector('input[name="sizeAfterBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
+    const sizeBeforeVal = (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
+    const sizeAfterNum = sizeAfterVal ? Number(sizeAfterVal) : 0;
+    const sizeBeforeNum = sizeBeforeVal ? Number(sizeBeforeVal) : 0;
+    if (sizeAfterNum > 0 && sizeBeforeNum <= 0) {
+      alert("Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.");
+      return;
+    }
+
     const fd = new FormData(form);
     const payload: Record<string, unknown> = Object.fromEntries(fd.entries());
     try {
