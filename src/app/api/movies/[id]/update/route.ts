@@ -51,6 +51,40 @@ export async function POST(
     data.sizeAfterBytes = BigInt(Number(body.sizeAfterBytes));
   }
 
+  const existing = await prisma.movie.findUnique({
+    where: { id: idNum },
+    select: {
+      status: true,
+      statusScheduledAt: true,
+      checkSum: true,
+      sizeBeforeBytes: true,
+      sizeAfterBytes: true,
+    },
+  });
+  if (!existing) {
+    return NextResponse.json({ ok: false, error: "Film nicht gefunden" }, { status: 404 });
+  }
+
+  const effCheckSum =
+    data.checkSum !== undefined
+      ? (data.checkSum as string | null)
+      : existing.checkSum;
+  const effSizeAfter =
+    data.sizeAfterBytes !== undefined ? data.sizeAfterBytes : existing.sizeAfterBytes;
+  const effSizeBefore =
+    data.sizeBeforeBytes !== undefined ? data.sizeBeforeBytes : existing.sizeBeforeBytes;
+
+  if (
+    existing.status !== StatusEnum.ARCHIVED &&
+    effCheckSum &&
+    effCheckSum.trim().length > 0 &&
+    ((effSizeAfter != null && effSizeAfter > 0n) ||
+      (effSizeBefore != null && effSizeBefore > 0n))
+  ) {
+    data.status = StatusEnum.UPLOADED;
+    data.statusScheduledAt = null;
+  }
+
   const parseOptionalDate = (
     s: unknown,
     fieldLabel: string
@@ -80,7 +114,9 @@ export async function POST(
   }
 
   // statusScheduledAt: nur bei Status VO_SOON; sonst immer null
-  if (body.status && typeof body.status === "string" && body.status !== StatusEnum.VO_SOON) {
+  const effectiveStatus =
+    (data.status as string | undefined) ?? (typeof body.status === "string" ? body.status : undefined);
+  if (effectiveStatus && effectiveStatus !== StatusEnum.VO_SOON) {
     data.statusScheduledAt = null;
   } else if (body.statusScheduledAt !== undefined) {
     const result = parseOptionalDate(body.statusScheduledAt, "VÖ-Datum (statusScheduledAt)");
@@ -90,15 +126,11 @@ export async function POST(
     data.statusScheduledAt = result.date;
   }
 
-  const newStatus = typeof body.status === "string" ? body.status : undefined;
-  let oldMovie: { status: string; statusScheduledAt: Date | null } | null = null;
-  if (newStatus) {
-    const existing = await prisma.movie.findUnique({
-      where: { id: idNum },
-      select: { status: true, statusScheduledAt: true },
-    });
-    if (existing) oldMovie = { status: existing.status, statusScheduledAt: existing.statusScheduledAt };
-  }
+  const newStatus = effectiveStatus;
+  const oldMovie: { status: string; statusScheduledAt: Date | null } = {
+    status: existing.status,
+    statusScheduledAt: existing.statusScheduledAt,
+  };
 
   try {
     await prisma.movie.update({ where: { id: idNum }, data: data as never });
