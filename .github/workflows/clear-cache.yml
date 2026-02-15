@@ -16,6 +16,10 @@ jobs:
       actions: write  # Benötigt für cache delete
       contents: read  # Für gh (Repository-Zugriff)
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Alle Caches löschen
         run: |
           echo "Lösche alle GitHub Actions Caches für dieses Repository..."
