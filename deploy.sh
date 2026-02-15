@@ -117,6 +117,12 @@ else
   fi
   echo "[deploy] next build..."
   "$NPM_BIN" run -s build
+  # Next.js standalone enthält .next/static und public NICHT automatisch – manuell kopieren
+  if [ -d .next/standalone ] && [ -d .next/static ]; then
+    echo "[deploy] kopiere .next/static und public ins Standalone"
+    cp -r .next/static .next/standalone/.next/
+    cp -r public .next/standalone/ 2>/dev/null || mkdir -p .next/standalone/public
+  fi
   # .env für Standalone-Server (cwd = .next/standalone) – bei SKIP_BUILD lädt start-standalone.cjs aus Projekt-Root
   if [ -f .env ] && [ -d .next/standalone ]; then
     cp .env .next/standalone/.env

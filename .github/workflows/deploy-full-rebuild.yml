@@ -1,25 +1,23 @@
-# Deploy CineVault V2 per SSH: Vollrebuild auf dem Server (deploy.sh)
-# Wird ausgelöst, wenn der Staging-Workflow erfolgreich durchgelaufen ist (workflow_run).
-# Baut auf dem Server mit npm run build – garantiert vollständiges .next/static (Client Components).
-# Dauert ~2–5 Min, dafür zuverlässig. deploy.sh kopiert .next/static ins Standalone.
-# Secrets: SSH_HOST, SSH_USER, SSH_PORT, SSH_KEY, APP_DIR (optional), DISCORD_STAGING_WEBHOOK
+# Notfall: Vollständiger Rebuild auf dem Server (ohne Artifact).
+# Erstellt .next/static lokal auf dem Server – löst das Problem fehlender Client Components.
+# Dauert länger (~2–5 Min) als Artifact-Deploy, aber garantiert vollständigen Build.
+#
+# Auslösen: Actions → "Deploy Full Rebuild" → "Run workflow"
+# Voraussetzung: Vorheriger Push auf main, damit der Server den Code hat.
+# Secrets: SSH_HOST, SSH_USER, SSH_PORT, SSH_KEY, APP_DIR, DISCORD_STAGING_WEBHOOK
 
-name: Deploy
+name: Deploy Full Rebuild
 
 on:
-  workflow_run:
-    workflows: ["Staging"]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
     steps:
-      - name: Deploy via SSH (Vollrebuild, deploy.sh)
+      - name: Deploy via SSH (Vollrebuild, kein Artifact)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -32,6 +30,7 @@ jobs:
           chmod 600 key.pem
           SSH_OPTS="-i key.pem -p ${SSH_PORT:-22} -o StrictHostKeyChecking=no"
           ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" "cd '$APP_DIR' && git fetch --all --prune && git reset --hard origin/main && chmod +x deploy.sh 2>/dev/null || true && command -v dos2unix >/dev/null 2>&1 && dos2unix -q deploy.sh 2>/dev/null || true; APP_DIR='$APP_DIR' bash ./deploy.sh"
+          echo "Deploy abgeschlossen. .next/static wurde auf dem Server erstellt."
 
       - name: Discord – Deploy erfolgreich
         if: success()
