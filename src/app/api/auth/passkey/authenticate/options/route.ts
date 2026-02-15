@@ -5,7 +5,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { generateAuthenticationOptions } from "@simplewebauthn/server";
 import { getWebAuthnRpId } from "@/lib/webauthn";
 import {
@@ -35,7 +34,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const cookieStore = await cookies();
   const response = NextResponse.json({ ok: true, options });
   response.cookies.set(WEBAUTHN_CHALLENGE_COOKIE_NAME, challengeSessionId, {
     httpOnly: true,

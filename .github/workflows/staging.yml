@@ -168,6 +168,14 @@ jobs:
           npm run build 2>&1 | tee build.txt
           exit ${PIPESTATUS[0]}
 
+      - name: Standalone: .next/static und public ergänzen
+        if: steps.build.outcome == 'success'
+        run: |
+          # Next.js standalone enthält .next/static und public NICHT automatisch.
+          # Ohne diese fehlen Client-JS-Chunks → Client Components (z.B. PasskeyLoginButton) rendern nicht.
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/ 2>/dev/null || mkdir -p .next/standalone/public
+
       - name: Artifact hochladen (next-standalone)
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4

@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { credential, credentialDeviceType, credentialBackedUp } =
+  const { credential, credentialDeviceType, credentialBackedUp: _credentialBackedUp } =
     verification.registrationInfo;
 
   const transportsStr = credential.transports?.length

@@ -15,11 +15,7 @@ import { Role as RoleEnum } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { getSessionIdFromCookie } from "@/lib/session";
 import { getCsrfTokenFromRequest, requireCsrf } from "@/lib/csrf";
-import {
-  getWebAuthnRpId,
-  getWebAuthnOrigin,
-  WEBAUTHN_RP_NAME,
-} from "@/lib/webauthn";
+import { getWebAuthnRpId, WEBAUTHN_RP_NAME } from "@/lib/webauthn";
 import {
   setRegistrationChallenge,
 } from "@/lib/webauthn-challenge";
@@ -48,7 +44,6 @@ export async function POST(request: Request) {
   }
 
   const rpID = getWebAuthnRpId(request);
-  const origin = getWebAuthnOrigin(request);
   const user = auth.user;
 
   const existingCredentials = await prisma.webAuthnCredential.findMany({
