@@ -1,0 +1,25 @@
+# Manueller Cache-Clear: Löscht alle GitHub Actions Caches.
+# Nützlich wenn z.B. Build-Artefakte inkonsistent sind oder ein Rebuild von Null nötig ist.
+# Nach dem Lauf wird der nächste Push/Staging-Run alles neu bauen (ohne Cache).
+#
+# Auslösen: Actions → "Clear GitHub Cache" → "Run workflow"
+
+name: Clear GitHub Cache
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write  # Benötigt für cache delete
+      contents: read  # Für gh (Repository-Zugriff)
+    steps:
+      - name: Alle Caches löschen
+        run: |
+          echo "Lösche alle GitHub Actions Caches für dieses Repository..."
+          gh cache delete --all
+          echo "Cache-Clear abgeschlossen. Nächster Staging-Build wird ohne Cache laufen."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
