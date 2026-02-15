@@ -140,9 +140,9 @@ export default proxy;
 export const config = {
   matcher: [
     /*
-     * Alle Pfade außer _next, static, favicon.
-     * Siehe: https://nextjs.org/docs/app/api-reference/file-conventions/proxy
+     * Seiten-Pfade (nicht /api, _next, static, favicon).
+     * API-Routen laufen ohne Proxy direkt zu den Route-Handlern.
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/|_next/static|_next/image|favicon.ico).*)",
   ],
 };

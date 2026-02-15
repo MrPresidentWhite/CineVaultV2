@@ -24,9 +24,12 @@
     "@aws-sdk/s3-request-presigner": "^3.982.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@simplewebauthn/browser": "^13.2.2",
+    "@simplewebauthn/server": "^13.2.2",
     "argon2": "^0.44.0",
     "colorthief": "^2.6.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
     "ioredis": "^5.9.2",
     "next": "16.1.6",
     "node-cron": "^4.2.1",
@@ -38,8 +41,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "sshpk": "^1.18.0",
-    "swagger-ui-react": "^5.31.0",
-    "dotenv": "^17.2.3"
+    "swagger-ui-react": "^5.31.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { TwoFactorClient } from "./TwoFactorClient";
+import { PasskeysClient } from "./PasskeysClient";
 
 export default async function TwoFactorPage() {
   const auth = await requireAuth({ callbackUrl: "/dashboard/security/2fa" });
@@ -11,8 +12,11 @@ export default async function TwoFactorPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-text tracking-tight">2FA</h1>
+      <h1 className="text-2xl font-bold text-text tracking-tight">
+        2FA & Passkeys
+      </h1>
       <TwoFactorClient initialEnabled={!!user?.totpEnabledAt} />
+      <PasskeysClient />
     </div>
   );
 }

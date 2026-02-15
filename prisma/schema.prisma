@@ -360,10 +360,29 @@ model User {
   movieStatusChanges   MovieStatusChange[]
   statusPreferences    UserStatusPreference[]
 
-  apiKeys           ApiKey[]
-  backupCodes       UserBackupCode[]
-  trustedDevices    TrustedDevice[]
-  digestViewTokens  DigestViewToken[]
+  apiKeys             ApiKey[]
+  backupCodes         UserBackupCode[]
+  trustedDevices      TrustedDevice[]
+  digestViewTokens    DigestViewToken[]
+  webAuthnCredentials WebAuthnCredential[]
+}
+
+/// WebAuthn/Passkey credentials for passwordless login.
+model WebAuthnCredential {
+  id           String   @id @default(cuid())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String   @unique @db.VarChar(512)
+  publicKey    String   @db.Text
+  counter      BigInt   @default(0)
+  transports   String?  @db.VarChar(255)
+  deviceType   String?  @db.VarChar(32)
+  name         String?  @db.VarChar(191)
+  webauthnUserId String @db.VarChar(256)
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([credentialId])
 }
 
 /// 2FA-Backup-Codes: einmal verwendbar, gehasht gespeichert.

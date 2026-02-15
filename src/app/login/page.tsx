@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { isDev } from "@/lib/env";
+import { PasskeyLoginButton } from "./PasskeyLoginButton";
 
 type SearchParams = { success?: string; error?: string; callbackUrl?: string };
 
@@ -98,6 +99,8 @@ export default async function LoginPage({
               Login
             </button>
           </form>
+
+          <PasskeyLoginButton callbackUrl={callbackUrl} />
 
           <p className="text-[13px] text-[#aaa]">
             Hinweis: Bitte aktiviere „angemeldet bleiben“ nicht auf öffentlichen
