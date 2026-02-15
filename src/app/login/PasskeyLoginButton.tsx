@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { startAuthentication } from "@simplewebauthn/browser";
+import {
+  startAuthentication,
+  type PublicKeyCredentialRequestOptionsJSON,
+} from "@simplewebauthn/browser";
 
 type Props = { callbackUrl: string };
 
@@ -25,7 +28,7 @@ export function PasskeyLoginButton({ callbackUrl }: Props) {
         setError(optsData.error ?? "Optionen konnten nicht geladen werden.");
         return;
       }
-      const options = optsData.options;
+      const options = optsData.options as PublicKeyCredentialRequestOptionsJSON | undefined;
       if (!options) {
         setError("Keine Optionen erhalten.");
         return;

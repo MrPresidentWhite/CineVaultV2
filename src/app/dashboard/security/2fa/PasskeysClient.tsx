@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { startRegistration } from "@simplewebauthn/browser";
+import {
+  startRegistration,
+  type PublicKeyCredentialCreationOptionsJSON,
+} from "@simplewebauthn/browser";
 import { getCsrfToken, csrfHeaders, setCsrfToken } from "@/lib/csrf-client";
 
 type Credential = {
@@ -66,7 +69,7 @@ export function PasskeysClient() {
         setError(optsData.error ?? "Optionen konnten nicht geladen werden.");
         return;
       }
-      const options = optsData.options;
+      const options = optsData.options as PublicKeyCredentialCreationOptionsJSON | undefined;
       if (!options) {
         setError("Keine Optionen erhalten.");
         return;
