@@ -168,7 +168,7 @@ jobs:
           npm run build 2>&1 | tee build.txt
           exit ${PIPESTATUS[0]}
 
-      - name: Standalone: .next/static und public ergänzen
+      - name: "Standalone: .next/static und public ergänzen"
         if: steps.build.outcome == 'success'
         run: |
           # Next.js standalone enthält .next/static und public NICHT automatisch.
