@@ -1,6 +1,6 @@
 /**
- * Auth-Helper: Benutzer aus Session laden, Rollen prüfen.
- * Für Server Components und Route Handlers.
+ * Auth helpers: load user from session, check roles.
+ * For Server Components and Route Handlers.
  */
 
 import { redirect } from "next/navigation";
@@ -13,13 +13,13 @@ import { Role as RoleEnum } from "@/generated/prisma/enums";
 export type AuthResult = {
   user: UserModel;
   session: SessionData;
-  /** Effektive Rolle (viewAsRole oder user.role). */
+  /** Effective role (viewAsRole or user.role). */
   effectiveRole: Role;
 };
 
 /**
- * Lädt die aktuelle Session und den zugehörigen User aus der DB.
- * Gibt null zurück, wenn keine Session, User nicht existiert oder gesperrt ist.
+ * Load current session and associated user from DB.
+ * Returns null if no session, user does not exist, or user is locked.
  */
 export async function getAuth(meta?: {
   ipAddress?: string | null;
@@ -42,8 +42,8 @@ export async function getAuth(meta?: {
 }
 
 /**
- * Wie getAuth, aber leitet bei fehlender Auth auf die Login-Seite um.
- * Nur in Server Components oder Route Handlers verwenden (nutzt next/navigation redirect).
+ * Like getAuth, but redirects to login page when auth is missing.
+ * Use only in Server Components or Route Handlers (uses next/navigation redirect).
  */
 export async function requireAuth(meta?: {
   ipAddress?: string | null;
@@ -60,13 +60,13 @@ export async function requireAuth(meta?: {
   return auth;
 }
 
-/** Prüft, ob der User mindestens die angegebene Rolle hat (ADMIN > EDITOR > VIEWER). */
+/** Check if user has at least the given role (ADMIN > EDITOR > VIEWER). */
 export function hasRole(user: { role: Role }, role: Role): boolean {
   const order: Role[] = [RoleEnum.VIEWER, RoleEnum.EDITOR, RoleEnum.ADMIN];
   return order.indexOf(user.role) >= order.indexOf(role);
 }
 
-/** Prüft, ob die effektive Rolle mindestens die angegebene ist. */
+/** Check if effective role is at least the given role. */
 export function hasEffectiveRole(auth: AuthResult, role: Role): boolean {
   const order: Role[] = [RoleEnum.VIEWER, RoleEnum.EDITOR, RoleEnum.ADMIN];
   return order.indexOf(auth.effectiveRole) >= order.indexOf(role);

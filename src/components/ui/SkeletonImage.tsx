@@ -5,11 +5,11 @@ import { useState } from "react";
 
 type SkeletonImageProps = ImageProps & {
   /**
-   * Zusätzliche Klassen für den Skeleton-Layer (z. B. andere Farbe/Rundung).
+   * Additional classes for the skeleton layer (e.g. different color/radius).
    */
   skeletonClassName?: string;
   /**
-   * Klassen für den umgebenden Container (z. B. feste Höhe/Breite).
+   * Classes for the surrounding container (e.g. fixed height/width).
    */
   containerClassName?: string;
 };
@@ -19,9 +19,9 @@ function mergeClasses(...parts: Array<string | undefined>): string {
 }
 
 /**
- * Wrapper um `next/image` mit einfachem Tailwind-Skeleton:
- * - zeigt einen pulsierenden Platzhalter, bis das Bild geladen ist
- * - behält die vom aufrufenden Code gesetzte Größe/Aspect-Ratio bei
+ * Wrapper around `next/image` with simple Tailwind skeleton:
+ * - shows pulsating placeholder until image is loaded
+ * - preserves size/aspect-ratio set by calling code
  */
 export function SkeletonImage({
   className,

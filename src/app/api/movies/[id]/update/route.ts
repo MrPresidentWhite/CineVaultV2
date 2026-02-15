@@ -9,9 +9,9 @@ import { invalidateHomeCache } from "@/lib/home-data";
 
 /**
  * POST /api/movies/[id]/update
- * Body: quality, mediaType, status, statusScheduledAt (nur bei status VO_SOON), priority, sizeBeforeBytes, sizeAfterBytes,
+ * Body: quality, mediaType, status, statusScheduledAt (only when status VO_SOON), priority, sizeBeforeBytes, sizeAfterBytes,
  * vbSentAt, vbReceivedAt, videobusterUrl, checkSum, assignedToUserId
- * Erfordert EDITOR.
+ * Requires EDITOR role.
  */
 export async function POST(
   request: Request,
@@ -129,7 +129,7 @@ export async function POST(
     data.vbReceivedAt = result.date;
   }
 
-  // statusScheduledAt: nur bei Status VO_SOON; sonst immer null
+  // statusScheduledAt: only when status is VO_SOON; otherwise always null
   const effectiveStatus =
     (data.status as string | undefined) ?? (typeof body.status === "string" ? body.status : undefined);
   if (effectiveStatus && effectiveStatus !== StatusEnum.VO_SOON) {

@@ -218,7 +218,7 @@ export function ImportMoviesClient({
     if (!inspect?.details) return;
 
     const hasCollection = Boolean(inspect.collection);
-    // Wenn KEINE Collection vorhanden ist und der Film existiert, abbrechen
+    // Abort when no collection exists and the movie already exists
     if (!hasCollection && inspect.existsMovieId) {
       return;
     }
@@ -247,7 +247,7 @@ export function ImportMoviesClient({
           return;
         }
 
-        // Validierung der Größenfelder pro Film
+        // Validate size fields per movie
         for (const p of toImport) {
           const opts = partOptions[p.tmdbId];
           if (!opts) continue;
@@ -461,7 +461,7 @@ export function ImportMoviesClient({
               if (searchTimeoutRef.current) {
                 window.clearTimeout(searchTimeoutRef.current);
               }
-              // Live-Suche mit leichtem Debounce
+              // Live search with slight debounce
               searchTimeoutRef.current = window.setTimeout(() => {
                 runSearch(v);
               }, 250);

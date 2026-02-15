@@ -1,0 +1,35 @@
+---
+description: Workflow bei GitHub-Issues – Commit-Verknüpfung und Abschluss-Kommentar
+alwaysApply: true
+---
+
+# GitHub Issue Workflow
+
+Wenn ein Issue aus dem Repository umgesetzt wird:
+
+1. **Commit mit Issue verknüpfen**: Im Commit-Message immer `Fixes #N` oder `Closes #N` einbauen (N = Issue-Nummer). Damit schließt GitHub das Issue automatisch beim Merge.
+
+2. **Beim Schließen antworten**: Im Issue einen Kommentar hinterlassen, der die vorgenommenen Änderungen beschreibt:
+   - Welche Dateien/Module betroffen sind
+   - Was konkret geändert oder implementiert wurde
+   - Kurze Begründung/Zusammenhang wenn sinnvoll
+
+Beispiel Commit-Message:
+```
+Titel der Änderung
+
+Beschreibung der Änderung...
+
+Fixes #2
+```
+
+Beispiel Issue-Kommentar:
+```
+## Umgesetzt in Commit abc1234
+
+### Änderungen
+- **Datei X**: Änderung A
+- **Datei Y**: Änderung B
+
+Kurze Zusammenfassung des Ziels.
+```

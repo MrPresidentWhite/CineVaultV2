@@ -47,7 +47,7 @@ export default async function MovieDetailPage({ params }: Props) {
       const refPath = new URL(referer).pathname;
       if (refPath !== `/movies/${idNum}`) backUrl = referer;
     } catch {
-      // Referer ungültig
+      // Referer invalid
     }
   }
 

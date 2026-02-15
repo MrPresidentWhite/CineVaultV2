@@ -1,6 +1,6 @@
 /**
- * Film-Detail: laden mit Redis-Cache, Public-URLs, UI-Formatierung.
- * Entspricht der Logik aus dem alten movie.ts.
+ * Movie detail: load with Redis cache, public URLs, UI formatting.
+ * Mirrors logic from legacy movie.ts.
  */
 
 import { prisma } from "@/lib/db";
@@ -179,19 +179,19 @@ export async function getMovieById(id: number): Promise<MovieDetail | null> {
   });
 }
 
-/** Invalidiert den Detail-Cache eines Films (z. B. nach Update). */
+/** Invalidate movie detail cache (e.g. after update). */
 export async function invalidateMovieCache(id: number): Promise<void> {
   const { cacheDelete } = await import("@/lib/cache");
   await cacheDelete(`movie:detail:${id}:v1`);
 }
 
-/** Invalidiert den Filme-Listen-Cache (z. B. nach Update/Delete). */
+/** Invalidate movies list cache (e.g. after update/delete). */
 export async function invalidateMoviesListCache(): Promise<void> {
   const { cacheDelete } = await import("@/lib/cache");
   await cacheDelete("movies:list:default:v1");
 }
 
-/** Für Listen-Seite: gleiche Form wie HomeMovie, mit Cache. */
+/** For list page: same shape as HomeMovie, with cache. */
 export type MovieListItem = {
   id: number;
   title: string;

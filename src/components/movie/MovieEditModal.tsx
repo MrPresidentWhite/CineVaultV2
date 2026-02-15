@@ -254,7 +254,7 @@ export function MovieEditModal({ movie, users }: Props) {
                           'input[name="vbSentAt"]'
                         ) as HTMLInputElement;
                         if (inp) inp.value = new Date().toISOString().slice(0, 10);
-                        // Status auf „Im Versand“ setzen, wenn noch kein höherer Status
+                        // Set status to "Im Versand" when no higher status yet
                         const statusesBeforeShipping: Status[] = [
                           "ON_WATCHLIST",
                           "VO_UNKNOWN",

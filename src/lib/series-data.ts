@@ -1,6 +1,6 @@
 /**
- * Serien-Detail: laden mit Redis-Cache, Public-URLs, Laufzeiten, UI-Formatierung.
- * Entspricht der Logik aus dem alten series.ts.
+ * Series detail: load with Redis cache, public URLs, runtimes, UI formatting.
+ * Mirrors logic from legacy series.ts.
  */
 
 import { prisma } from "@/lib/db";
@@ -52,7 +52,7 @@ export type SeriesDetailEpisode = {
   sizeBefore: string | null;
   sizeAfter: string | null;
   savingsPct: string | null;
-  /** Roh-Bytes für Edit-Formular (JSON-sicher). */
+  /** Raw bytes for edit form (JSON-safe). */
   sizeBeforeBytes: number | null;
   sizeAfterBytes: number | null;
 };
@@ -97,7 +97,7 @@ export type SeriesDetail = {
 };
 
 /**
- * Lädt eine Serie inkl. Seasons und Episoden. Gecacht.
+ * Load series with seasons and episodes. Cached.
  */
 export async function getSeriesById(id: number): Promise<SeriesDetail | null> {
   const key = `${SERIES_DETAIL_KEY_PREFIX}${id}:v1`;
@@ -253,13 +253,13 @@ export async function getSeriesById(id: number): Promise<SeriesDetail | null> {
   });
 }
 
-/** Invalidiert den Detail-Cache einer Serie (z. B. nach Update). */
+/** Invalidate series detail cache (e.g. after update). */
 export async function invalidateSeriesCache(id: number): Promise<void> {
   const { cacheDelete } = await import("@/lib/cache");
   await cacheDelete(`${SERIES_DETAIL_KEY_PREFIX}${id}:v1`);
 }
 
-/** Für Listen-Seite: gleiche Form wie HomeSeries, mit Cache. */
+/** For list page: same shape as HomeSeries, with cache. */
 export type SeriesListItem = {
   id: number;
   title: string;
@@ -451,7 +451,7 @@ export async function getSeriesForList(): Promise<SeriesListItem[]> {
   });
 }
 
-/** Invalidiert den Serien-Listen-Cache. */
+/** Invalidate series list cache. */
 export async function invalidateSeriesListCache(): Promise<void> {
   const { cacheDelete } = await import("@/lib/cache");
   await Promise.all([

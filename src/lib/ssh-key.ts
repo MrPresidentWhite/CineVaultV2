@@ -1,6 +1,6 @@
 /**
- * SSH-Key-Parsing: Fingerprint und Label (RSA + ED25519).
- * Nutzt sshpk für öffentliche und private Keys.
+ * SSH key parsing: fingerprint and label (RSA + ED25519).
+ * Uses sshpk for public and private keys.
  */
 
 import { parseKey } from "sshpk";
@@ -9,7 +9,7 @@ export type SshKeyInfo = {
   type: "rsa" | "ed25519";
   fingerprint: string;
   label: string;
-  /** Öffentlicher Schlüssel im SSH-Format für Signaturverifikation (z. B. Challenge-Response). */
+  /** Public key in SSH format for signature verification (e.g. challenge-response). */
   publicKeySsh: string;
 };
 
@@ -19,14 +19,14 @@ export type SshKeyParseError =
   | "ENCRYPTED_KEY";
 
 export type ParseSshKeyOptions = {
-  /** Passphrase für verschlüsselte private Keys. */
+  /** Passphrase for encrypted private keys. */
   passphrase?: string;
 };
 
 /**
- * Parst SSH-Key-Text (öffentlich oder privat), prüft auf RSA/ED25519,
- * liefert Fingerprint (SHA256, hex mit Doppelpunkten) und Label (Comment).
- * Bei verschlüsselten privaten Keys: passphrase in options übergeben.
+ * Parse SSH key text (public or private), check for RSA/ED25519,
+ * return fingerprint (SHA256, hex with colons) and label (comment).
+ * For encrypted private keys: pass passphrase in options.
  */
 export function parseSshKey(
   keyContent: string,
@@ -68,7 +68,7 @@ export function parseSshKey(
   }
 }
 
-/** Prüft, ob der eingegebene Text wie ein privater Key aussieht (PEM/OpenSSH). */
+/** Check if input text looks like a private key (PEM/OpenSSH). */
 export function looksLikePrivateKey(keyContent: string): boolean {
   const t = keyContent.trim();
   return (

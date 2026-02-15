@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       throw new Error("TMDb-Details nicht gefunden");
     }
 
-    // Collection: immer verknüpfen falls Film zu einer gehört (bestehende Collection nutzen oder anlegen)
+    // Collection: always link when movie belongs to one (use existing or create)
     let collectionId: number | null = null;
     let collectionPartTmdbIds: number[] = [];
     if (d.belongs_to_collection?.id) {
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
 
     const enumGenres = mapTmdbGenresToEnum(d.genres || []);
 
-    // Neue Filme beim Import immer RECENTLY_ADDED (systemisch), danach Status-Change für Notifications
+    // New movies on import always RECENTLY_ADDED (system), then status change for notifications
     const priority =
       (single.priority as keyof typeof PriorityEnum) || PriorityEnum.STANDARD;
     const mediaType =
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Nachträglich alle Filme dieser Collection verknüpfen (z. B. ersten Film, der ohne Collection angelegt wurde)
+    // Link all movies of this collection afterward (e.g. first movie created without collection)
     if (collectionId != null && collectionPartTmdbIds.length > 0) {
       await prisma.movie.updateMany({
         where: {
@@ -306,7 +306,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Collection-Bulk-Import (mehrere Filme)
+    // Collection bulk import (multiple movies)
     if (Array.isArray(body.movies) && body.movies.length > 0) {
       const importedIds: number[] = [];
       for (const m of body.movies) {
@@ -316,7 +316,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, ids: importedIds });
     }
 
-    // Single-Import (Rückwärtskompatibilität)
+    // Single import (backward compatibility)
     const tmdbId = Number(body.tmdbId);
     if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
       return NextResponse.json(

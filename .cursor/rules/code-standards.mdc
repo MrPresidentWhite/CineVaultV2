@@ -1,0 +1,27 @@
+---
+description: Code-Kommentare, Qualität und Architektur
+globs: src/**/*.ts, src/**/*.tsx
+alwaysApply: true
+---
+
+# Code Standards
+
+## Code Comments
+- **Language:** All code comments (JSDoc, inline) must be in English. New and revised comments: English only.
+- Only comment important/complex logic
+- Keep comments concise and meaningful
+- Focus on "why" rather than "what" for complex business logic
+- Avoid obvious comments that just repeat the code
+
+## Code Quality
+- Write clean, modern, maintainable code
+- Follow React/Next.js best practices
+- Separate server and client code clearly
+- Use TypeScript for type safety
+- Implement secure API communication
+
+## Architecture
+- Modular system design
+- Future-proof extensibility
+- Clear separation of concerns
+- Server-side and client-side code separation

@@ -1,7 +1,6 @@
 /**
- * Validierung: Wenn „Größe nachher“ (sizeAfterBytes) gesetzt ist,
- * muss auch „Größe vorher“ (sizeBeforeBytes) gesetzt sein.
- * Vgl. Issue #2
+ * Validation: when sizeAfterBytes is set, sizeBeforeBytes must also be set.
+ * See Issue #2.
  */
 export const SIZE_VALIDATION_ERROR_MESSAGE =
   "Wenn „Größe nachher“ ausgefüllt ist, muss auch „Größe vorher“ ausgefüllt sein.";
@@ -15,7 +14,7 @@ export function validateSizeBeforeWhenSizeAfter(
   return SIZE_VALIDATION_ERROR_MESSAGE;
 }
 
-/** Frontend-Helper: prüft ob Validierungsfehler vorliegt (Number-Werte aus Formular) */
+/** Frontend helper: check if validation error (number values from form). */
 export function hasSizeValidationError(
   sizeAfter: number,
   sizeBefore: number

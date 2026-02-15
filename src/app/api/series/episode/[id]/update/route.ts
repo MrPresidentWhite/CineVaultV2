@@ -9,7 +9,7 @@ import { validateSizeBeforeWhenSizeAfter } from "@/lib/movie-size-validation";
 /**
  * POST /api/series/episode/[id]/update
  * Body: sizeBeforeBytes, sizeAfterBytes, checkSum, runtimeMin
- * Erfordert EDITOR.
+ * Requires EDITOR role.
  */
 export async function POST(
   request: Request,

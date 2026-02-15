@@ -1,7 +1,7 @@
 /**
- * Status-Digest-Job: E-Mails an User mit Benachrichtigungs-Präferenzen
- * und Discord-Webhook für UPLOADED/ARCHIVED.
- * Läuft z. B. um 10:00 und 21:00 (Cron).
+ * Status digest job: emails to users with notification preferences
+ * and Discord webhook for UPLOADED/ARCHIVED.
+ * Runs e.g. at 10:00 and 21:00 (Cron).
  */
 
 import { randomBytes } from "node:crypto";
@@ -18,12 +18,12 @@ import { de } from "date-fns/locale";
 
 const DIGEST_WINDOW_HOURS = 12;
 
-/** Minuten: Änderungen näher beieinander = Burst, nur letzte behalten */
+/** Minutes: changes close together = burst, keep only last */
 const STEP_BURST_MINUTES = 5;
-/** Max. Schritte pro Film (danach 1, 2, "...", n-1, n) */
+/** Max steps per movie (then 1, 2, "...", n-1, n) */
 const MAX_STEPS = 7;
 
-/** Tage: „Im Browser öffnen“-Link gültig */
+/** Days: "Open in browser" link valid */
 const VIEW_IN_BROWSER_DAYS = 7;
 
 const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED"];
@@ -53,17 +53,17 @@ function filterMeaningfulSteps(steps: StepInput[]): StepInput[] {
     const curr = steps[i];
     const statusKey = String(curr.status);
 
-    // 1. Consecutive duplicate: überspringen
+    // 1. Consecutive duplicate: skip
     if (result.length > 0 && result[result.length - 1].status === curr.status) continue;
 
-    // 2. Oszillation: Status schon gesehen und zuletzt anderer → Zyklus, überspringen
+    // 2. Oscillation: status already seen and last was different → cycle, skip
     if (seen.has(statusKey)) {
       const prev = result[result.length - 1];
       if (prev && String(prev.status) !== statusKey) continue;
     }
     seen.add(statusKey);
 
-    // 3. Burst: mehrere Schritte innerhalb STEP_BURST_MINUTES – letzte behalten
+    // 3. Burst: multiple steps within STEP_BURST_MINUTES – keep last
     let lastInBurst = i;
     for (let j = i + 1; j < steps.length; j++) {
       if (steps[j].time.getTime() - steps[i].time.getTime() <= burstMs) {
@@ -71,13 +71,13 @@ function filterMeaningfulSteps(steps: StepInput[]): StepInput[] {
       } else break;
     }
     const stepToAdd = steps[lastInBurst];
-    // Nach Burst: ggf. Duplikat zum letzten (z.B. A→B→A in 2 min)
+    // After burst: possibly duplicate of last (e.g. A→B→A in 2 min)
     if (result.length > 0 && result[result.length - 1].status === stepToAdd.status) continue;
     result.push(stepToAdd);
     i = lastInBurst;
   }
 
-  // 4. Max Schritte: bei Überfluss 1, 2, "...", n-1, n
+  // 4. Max steps: when excess, keep 1, 2, "...", n-1, n
   if (result.length > MAX_STEPS) {
     const keepFirst = 2;
     const keepLast = 2;
@@ -192,12 +192,12 @@ export async function sendStatusDigestJob(): Promise<void> {
   const windowStart = new Date(
     now.getTime() - DIGEST_WINDOW_HOURS * 60 * 60 * 1000
   );
-  /** Discord: aktuelle + vorherige 12h-Periode (Catch-up für fehlgeschlagene Jobs) */
+  /** Discord: current + previous 12h period (catch-up for failed jobs) */
   const discordWindowStart = new Date(
     now.getTime() - 2 * DIGEST_WINDOW_HOURS * 60 * 60 * 1000
   );
 
-  // 1. Änderungen der letzten 12h für E-Mails
+  // 1. Changes from last 12h for emails
   const recentChanges = await prisma.movieStatusChange.findMany({
     where: {
       changedAt: { gte: windowStart, lte: now },
@@ -224,7 +224,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     orderBy: { changedAt: "asc" },
   });
 
-  // 2. Undelivered Changes für Discord: aktuelle + vorherige 12h-Periode
+  // 2. Undelivered changes for Discord: current + previous 12h period
   const openChanges = await prisma.movieStatusChange.findMany({
     where: {
       changedAt: { gte: discordWindowStart, lte: now },
@@ -241,7 +241,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     },
   });
 
-  // Discord: UPLOADED/ARCHIVED aus allen offenen Changes (pro Status eine Nachricht)
+  // Discord: UPLOADED/ARCHIVED from all open changes (one message per status)
   const statusToMovies = new Map<Status, string[]>();
   DISCORD_RELEVANT_STATUSES.forEach((s) => statusToMovies.set(s, []));
   const seenMovies = new Set<number>();
@@ -262,7 +262,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     await sendDiscordNotification(content, `${title} – ${movies.length} Filme`);
   }
 
-  // E-Mails: nur wenn es recent Changes gibt und SMTP konfiguriert ist
+  // Emails: only when there are recent changes and SMTP is configured
   if (recentChanges.length > 0 && isEmailConfigured()) {
     const grouped = recentChanges.reduce<
       Record<
@@ -277,7 +277,7 @@ export async function sendStatusDigestJob(): Promise<void> {
       return acc;
     }, {});
 
-    // Vorgänger-Changes für firstTime (wann wurde "from" angetreten?)
+    // Predecessor changes for firstTime (when was "from" entered?)
     const movieIds = Object.keys(grouped).map(Number);
     const allChangesForMovies = await prisma.movieStatusChange.findMany({
       where: { movieId: { in: movieIds } },
@@ -348,7 +348,7 @@ export async function sendStatusDigestJob(): Promise<void> {
     }
   }
 
-  // Alle betroffenen Changes als geliefert markieren
+  // Mark all affected changes as delivered
   const allIds = [
     ...recentChanges.map((c) => c.id),
     ...openChanges.map((c) => c.id),
@@ -364,7 +364,7 @@ export async function sendStatusDigestJob(): Promise<void> {
   }
 }
 
-/** Abgelaufene „Im Browser öffnen“-Tokens löschen. Wird per Cron täglich ausgeführt. */
+/** Delete expired "Open in browser" tokens. Run daily via Cron. */
 export async function cleanupExpiredDigestViewTokens(): Promise<number> {
   const result = await prisma.digestViewToken.deleteMany({
     where: { expiresAt: { lt: new Date() } },
