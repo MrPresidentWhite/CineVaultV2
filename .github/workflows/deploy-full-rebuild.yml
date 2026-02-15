@@ -17,6 +17,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Deploy via SSH (Vollrebuild, kein Artifact)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}

@@ -19,6 +19,11 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
       - name: Deploy via SSH (Vollrebuild, deploy.sh)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
