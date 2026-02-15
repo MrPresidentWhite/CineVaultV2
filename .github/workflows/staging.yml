@@ -175,6 +175,10 @@ jobs:
           # Ohne diese fehlen Client-JS-Chunks → Client Components (z.B. PasskeyLoginButton) rendern nicht.
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/ 2>/dev/null || mkdir -p .next/standalone/public
+          echo "Verifizierung - .next/static im Standalone:"
+          ls -la .next/standalone/.next/static 2>/dev/null || echo "FEHLER: .next/static nicht kopiert!"
+          find .next/standalone/.next/static -type f 2>/dev/null | head -5
+          du -sh .next/standalone/.next/static 2>/dev/null
 
       - name: Artifact hochladen (next-standalone)
         if: steps.build.outcome == 'success'
