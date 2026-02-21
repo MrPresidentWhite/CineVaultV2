@@ -196,13 +196,16 @@ export async function POST(
       invalidateHomeCache(),
     ]);
 
-    const statusNotifyFrom = [StatusEnum.SHIPPING, StatusEnum.PROCESSING, StatusEnum.UPLOADED, StatusEnum.ARCHIVED];
-    if (
-      newStatus &&
-      statusNotifyFrom.includes(newStatus as (typeof StatusEnum)[keyof typeof StatusEnum])
-    ) {
+    type NotifyStatus = "SHIPPING" | "PROCESSING" | "UPLOADED" | "ARCHIVED";
+    const notifyStatuses: NotifyStatus[] = [
+      StatusEnum.SHIPPING,
+      StatusEnum.PROCESSING,
+      StatusEnum.UPLOADED,
+      StatusEnum.ARCHIVED,
+    ];
+    if (newStatus && (notifyStatuses as string[]).includes(newStatus)) {
       const { notifyAdditionalAssigneesOnStatusChange } = await import("@/lib/notify-assignees");
-      await notifyAdditionalAssigneesOnStatusChange(idNum, newStatus as (typeof StatusEnum)[keyof typeof StatusEnum]);
+      await notifyAdditionalAssigneesOnStatusChange(idNum, newStatus as NotifyStatus);
     }
 
     return NextResponse.json({ ok: true });
