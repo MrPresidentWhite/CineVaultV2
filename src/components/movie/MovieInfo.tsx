@@ -57,6 +57,24 @@ export function MovieInfo({ movie, canEdit }: Props) {
               </strong>
             </li>
           )}
+          {canEdit && (movie.additionalAssignees?.length ?? 0) > 0 && (
+            <li>
+              <span>Weitere zugewiesene</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {movie.additionalAssignees!.map((a) => (
+                  <span
+                    key={a.user.id}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-sm bg-panel border border-ring"
+                  >
+                    {a.user.name}
+                    <span className={`role-badge role--${a.user.role.toLowerCase()}`}>
+                      {a.user.role}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </li>
+          )}
           {movie.ui.addedAt && (
             <li>
               <span>Hinzugefügt</span>

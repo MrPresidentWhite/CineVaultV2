@@ -101,6 +101,8 @@ export function MovieEditModal({ movie, users }: Props) {
     ["vbSentAt", "vbReceivedAt", "statusScheduledAt"].forEach((k) => {
       if (!payload[k]) payload[k] = "";
     });
+    const additionalIds = fd.getAll("additionalAssigneeUserIds").map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0);
+    payload.additionalAssigneeUserIds = additionalIds;
     try {
       const res = await fetch(`/api/movies/${movie.id}/update`, {
         method: "POST",
@@ -157,12 +159,34 @@ export function MovieEditModal({ movie, users }: Props) {
               <label className="block">
                 <span className="block text-sm text-text/70 mb-1">Zugewiesen</span>
                 <select name="assignedToUserId" className="input w-full" defaultValue={movie.assignedToUser?.id ?? ""}>
+                  <option value="">–</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} | {u.role}
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="block">
+                <span className="block text-sm text-text/70 mb-1">Weitere zugewiesene (Wunschliste)</span>
+                <select
+                  name="additionalAssigneeUserIds"
+                  multiple
+                  className="input w-full min-h-[80px]"
+                  defaultValue={movie.additionalAssignees?.map((a) => String(a.user.id)) ?? []}
+                  title="Mehrere auswählbar (Strg+Klick)"
+                >
+                  {users
+                    .filter((u) => u.id !== (movie.assignedToUser?.id ?? null))
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} | {u.role}
+                      </option>
+                    ))}
+                </select>
+                <small className="block text-text/60 mt-1">
+                  Bei Status „Im Versand“ oder später werden diese Personen per E-Mail benachrichtigt.
+                </small>
               </label>
               <label className="block">
                 <span className="block text-sm text-text/70 mb-1">Status</span>

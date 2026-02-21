@@ -91,6 +91,7 @@ export type MovieDetail = {
     email: string;
     role: string;
   } | null;
+  additionalAssignees: { user: { id: number; name: string; email: string; role: string } }[];
   genres: { genre: Genre }[];
   files: { resolution: string | null; codec: string | null; audio: string | null }[];
   ui: MovieDetailUi;
@@ -103,7 +104,7 @@ const pub = (u: string | null | undefined) => toPublicUrl(u) ?? null;
  * Ergebnis wird in Redis gecacht (MOVIE_DETAIL_TTL Sekunden).
  */
 export async function getMovieById(id: number): Promise<MovieDetail | null> {
-  const key = `movie:detail:${id}:v1`;
+  const key = `movie:detail:${id}:v2`;
   return cacheGetOrSet(key, MOVIE_DETAIL_TTL, async () => {
     const movie = await prisma.movie.findUnique({
       where: { id },
@@ -113,6 +114,9 @@ export async function getMovieById(id: number): Promise<MovieDetail | null> {
         genres: { select: { genre: true } },
         assignedToUser: {
           select: { id: true, name: true, email: true, role: true },
+        },
+        additionalAssignees: {
+          select: { user: { select: { id: true, name: true, email: true, role: true } } },
         },
       },
     });
@@ -172,6 +176,7 @@ export async function getMovieById(id: number): Promise<MovieDetail | null> {
       collectionId: movie.collectionId,
       collection: movie.collection,
       assignedToUser: movie.assignedToUser,
+      additionalAssignees: movie.additionalAssignees,
       genres: movie.genres,
       files: movie.files,
       ui,

@@ -60,6 +60,7 @@ export async function POST(
       checkSum: true,
       sizeBeforeBytes: true,
       sizeAfterBytes: true,
+      assignedToUserId: true,
     },
   });
   if (!existing) {
@@ -148,8 +149,33 @@ export async function POST(
     statusScheduledAt: existing.statusScheduledAt,
   };
 
+  const primaryAssigneeId =
+    (data.assignedToUserId as number | null | undefined) !== undefined
+      ? (data.assignedToUserId as number | null)
+      : existing.assignedToUserId;
+
+  const additionalIdsRaw = Array.isArray(body.additionalAssigneeUserIds)
+    ? (body.additionalAssigneeUserIds as unknown[])
+        .map((v) => Number(v))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    : null;
+
   try {
     await prisma.movie.update({ where: { id: idNum }, data: data as never });
+
+    if (additionalIdsRaw !== null) {
+      const additionalIds = primaryAssigneeId
+        ? additionalIdsRaw.filter((id) => id !== primaryAssigneeId)
+        : additionalIdsRaw;
+      await prisma.movieAdditionalAssignee.deleteMany({ where: { movieId: idNum } });
+      if (additionalIds.length > 0) {
+        const uniq = [...new Set(additionalIds)];
+        await prisma.movieAdditionalAssignee.createMany({
+          data: uniq.map((userId) => ({ movieId: idNum, userId })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     if (oldMovie && newStatus && oldMovie.status !== newStatus) {
       await prisma.movieStatusChange.create({
@@ -169,6 +195,16 @@ export async function POST(
       invalidateMoviesListCache(),
       invalidateHomeCache(),
     ]);
+
+    const statusNotifyFrom = [StatusEnum.SHIPPING, StatusEnum.PROCESSING, StatusEnum.UPLOADED, StatusEnum.ARCHIVED];
+    if (
+      newStatus &&
+      statusNotifyFrom.includes(newStatus as (typeof StatusEnum)[keyof typeof StatusEnum])
+    ) {
+      const { notifyAdditionalAssigneesOnStatusChange } = await import("@/lib/notify-assignees");
+      await notifyAdditionalAssigneesOnStatusChange(idNum, newStatus as (typeof StatusEnum)[keyof typeof StatusEnum]);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("movie update failed:", e);

@@ -260,6 +260,8 @@ model Movie {
   updatedAt     DateTime            @updatedAt
   checkSum      String?             @db.VarChar(500)
   statusChanges MovieStatusChange[]
+  /// Weitere zugewiesene Personen (z. B. Wunschliste); primär bleibt assignedToUserId.
+  additionalAssignees MovieAdditionalAssignee[]
 
   @@index([collectionId])
   @@index([addedAt])
@@ -269,6 +271,17 @@ model Movie {
   @@index([mediaType])
   @@index([fsk])
   @@index([title], map: "idx_movie_title")
+}
+
+/// Weitere zugewiesene Personen pro Film (Wunschliste; bei Status „Im Versand“+ werden diese benachrichtigt).
+model MovieAdditionalAssignee {
+  movieId Int
+  userId  Int
+  movie   Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  user    User  @relation("MovieAdditionalAssignees", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, userId])
+  @@index([userId])
 }
 
 // === MovieGenre ===
@@ -352,10 +365,11 @@ model User {
   totpSecretEncrypted String?   @db.Text
   totpEnabledAt      DateTime?
 
-  sessions             Session[]
-  assignedMovies       Movie[]              @relation("AssignedMovies")
-  assignedSeries       Series[]             @relation("AssignedSeries")
-  contentFilters       UserLabelPreference[]
+  sessions                Session[]
+  assignedMovies          Movie[]                 @relation("AssignedMovies")
+  assignedSeries          Series[]                @relation("AssignedSeries")
+  movieAdditionalAssignees MovieAdditionalAssignee[] @relation("MovieAdditionalAssignees")
+  contentFilters          UserLabelPreference[]
   notificationsEnabled Boolean              @default(false)
   movieStatusChanges   MovieStatusChange[]
   statusPreferences    UserStatusPreference[]
