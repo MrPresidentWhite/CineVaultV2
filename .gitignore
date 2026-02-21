@@ -49,6 +49,7 @@ yarn-error.log*
 .env.production.local
 .env.docker.prepared
 !.env.example
+.sccignore
 
 # vercel
 .vercel

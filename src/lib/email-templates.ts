@@ -211,7 +211,7 @@ img { border:0; }
         </td></tr>
         <tr><td style="padding:0 0 12px 0;">
           <h2 style="font-size:19px;margin:0 0 12px 0;color:${styles.text};font-weight:600;">Hallo ${esc(userName)},</h2>
-          <p style="margin:10px 0;font-size:14px;color:${styles.textMuted};">Hier die wichtigsten Statusänderungen der letzten 12 Stunden, nach Status sortiert:</p>
+          <p style="margin:10px 0;font-size:14px;color:${styles.textMuted};">Hier die wichtigsten Statusänderungen der letzten 24 Stunden, nach Status sortiert:</p>
           ${categorySummaryLines ? `<p style="margin:12px 0 20px 0;font-size:14px;color:${styles.textMuted};line-height:1.6;">${categorySummaryLines}</p>` : ""}
         </td></tr>
         <tr><td style="padding:24px 0;">

@@ -1,7 +1,7 @@
 /**
- * Status digest job: emails to users with notification preferences
- * and Discord webhook for UPLOADED/ARCHIVED.
- * Runs e.g. at 10:00 and 21:00 (Cron).
+ * Status digest job: E-Mails an User mit Benachrichtigungs-Einstellungen
+ * und Discord-Webhook nur für UPLOADED/ARCHIVED.
+ * Läuft z. B. um 10:00 und 21:00 (Cron).
  */
 
 import { randomBytes } from "node:crypto";
@@ -26,6 +26,7 @@ const MAX_STEPS = 7;
 /** Days: "Open in browser" link valid */
 const VIEW_IN_BROWSER_DAYS = 7;
 
+/** Discord: nur UPLOADED und ARCHIVED (explizit so gewünscht). */
 const DISCORD_RELEVANT_STATUSES: Status[] = ["UPLOADED", "ARCHIVED"];
 const DISCORD_TITLES: Partial<
   Record<Status, { single: string; plural: string }>
@@ -189,18 +190,15 @@ async function sendDiscordNotification(content: string, logLabel?: string): Prom
 
 export async function sendStatusDigestJob(): Promise<void> {
   const now = new Date();
-  const windowStart = new Date(
-    now.getTime() - DIGEST_WINDOW_HOURS * 60 * 60 * 1000
-  );
-  /** Discord: current + previous 12h period (catch-up for failed jobs) */
-  const discordWindowStart = new Date(
+  /** Einheitliches Fenster für E-Mail und Discord: letzte 24h (2 × 12h). */
+  const digestWindowStart = new Date(
     now.getTime() - 2 * DIGEST_WINDOW_HOURS * 60 * 60 * 1000
   );
 
-  // 1. Changes from last 12h for emails
+  // 1. Undelivered changes aus dem gleichen 24h-Fenster für E-Mails (wie Discord)
   const recentChanges = await prisma.movieStatusChange.findMany({
     where: {
-      changedAt: { gte: windowStart, lte: now },
+      changedAt: { gte: digestWindowStart, lte: now },
       delivered: false,
     },
     select: {
@@ -224,10 +222,11 @@ export async function sendStatusDigestJob(): Promise<void> {
     orderBy: { changedAt: "asc" },
   });
 
-  // 2. Undelivered changes for Discord: current + previous 12h period
+  // 2. Gleiche Changes für Discord (gleiches 24h-Fenster)
+  // WICHTIG: Neueste zuerst, damit pro Film der letzte Status zählt (z. B. ARCHIVED nach UPLOADED).
   const openChanges = await prisma.movieStatusChange.findMany({
     where: {
-      changedAt: { gte: discordWindowStart, lte: now },
+      changedAt: { gte: digestWindowStart, lte: now },
       delivered: false,
     },
     select: {
@@ -239,9 +238,11 @@ export async function sendStatusDigestJob(): Promise<void> {
         select: { title: true, releaseYear: true },
       },
     },
+    orderBy: { changedAt: "desc" },
   });
 
-  // Discord: UPLOADED/ARCHIVED from all open changes (one message per status)
+  // Discord: nur UPLOADED/ARCHIVED (eine Nachricht pro Status)
+  // Jeder Film erscheint nur unter seinem neuesten Status (wegen orderBy desc + seenMovies).
   const statusToMovies = new Map<Status, string[]>();
   DISCORD_RELEVANT_STATUSES.forEach((s) => statusToMovies.set(s, []));
   const seenMovies = new Set<number>();
