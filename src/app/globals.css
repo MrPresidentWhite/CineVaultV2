@@ -895,6 +895,44 @@ hr.rounded {
 .role-badge.role--editor { background: #1a2a2a; color: #8cf; }
 .role-badge.role--viewer { background: #1a1a2a; color: #aaf; }
 
+/* User-Chip-Selector (Zugewiesen / Weitere zugewiesene) */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  border: 2px solid transparent;
+}
+.user-chip:hover { opacity: 0.9; }
+.user-chip--outline {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--ring);
+}
+.user-chip--outline.user-chip--admin { border-color: #a66; color: #f88; }
+.user-chip--outline.user-chip--editor { border-color: #58a; color: #8cf; }
+.user-chip--outline.user-chip--viewer { border-color: #66a; color: #aaf; }
+.user-chip--selected {
+  color: #0d0d0d;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+}
+.user-chip--selected.user-chip--admin { background: #c44; color: #fff; border-color: #c44; }
+.user-chip--selected.user-chip--editor { background: #48c; color: #fff; border-color: #48c; }
+.user-chip--selected.user-chip--viewer { background: #66a; color: #fff; border-color: #66a; }
+.user-chip__name { }
+.user-chip__role {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.user-chip--outline .user-chip__role { opacity: 0.75; }
+
 /* Checksum-Zeile + Hash-Popover */
 .checksum-row .checksum {
   display: inline-flex;

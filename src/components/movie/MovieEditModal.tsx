@@ -10,6 +10,7 @@ import {
   hasSizeValidationError,
   SIZE_VALIDATION_ERROR_MESSAGE,
 } from "@/lib/movie-size-validation";
+import { UserChipSelector } from "@/components/ui/UserChipSelector";
 import type { Status, Priority, MediaType } from "@/generated/prisma/enums";
 
 const KNOWN_QUALITIES = ["720p", "1080p", "1440p", "2160p"] as const;
@@ -25,6 +26,17 @@ export function MovieEditModal({ movie, users }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [status, setStatus] = useState<Status>(movie.status as Status);
+  const [primaryAssigneeId, setPrimaryAssigneeId] = useState<number | null>(
+    movie.assignedToUser?.id ?? null
+  );
+  const [additionalAssigneeIds, setAdditionalAssigneeIds] = useState<number[]>(
+    movie.additionalAssignees?.map((a) => a.user.id) ?? []
+  );
+
+  useEffect(() => {
+    setPrimaryAssigneeId(movie.assignedToUser?.id ?? null);
+    setAdditionalAssigneeIds(movie.additionalAssignees?.map((a) => a.user.id) ?? []);
+  }, [movie.id]);
 
   const closeModal = () => {
     if (!modalRef.current) return;
@@ -101,8 +113,8 @@ export function MovieEditModal({ movie, users }: Props) {
     ["vbSentAt", "vbReceivedAt", "statusScheduledAt"].forEach((k) => {
       if (!payload[k]) payload[k] = "";
     });
-    const additionalIds = fd.getAll("additionalAssigneeUserIds").map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0);
-    payload.additionalAssigneeUserIds = additionalIds;
+    payload.assignedToUserId = primaryAssigneeId ?? "";
+    payload.additionalAssigneeUserIds = additionalAssigneeIds;
     try {
       const res = await fetch(`/api/movies/${movie.id}/update`, {
         method: "POST",
@@ -156,38 +168,22 @@ export function MovieEditModal({ movie, users }: Props) {
           <div className="rounded-xl border border-ring bg-panel p-5 mt-4 first:mt-0">
             <h4 className="text-lg font-semibold text-text">Allgemein</h4>
             <div className="mt-4 flex flex-col gap-4">
-              <label className="block">
-                <span className="block text-sm text-text/70 mb-1">Zugewiesen</span>
-                <select name="assignedToUserId" className="input w-full" defaultValue={movie.assignedToUser?.id ?? ""}>
-                  <option value="">–</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} | {u.role}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="block text-sm text-text/70 mb-1">Weitere zugewiesene (Wunschliste)</span>
-                <select
-                  name="additionalAssigneeUserIds"
-                  multiple
-                  className="input w-full min-h-[80px]"
-                  defaultValue={movie.additionalAssignees?.map((a) => String(a.user.id)) ?? []}
-                  title="Mehrere auswählbar (Strg+Klick)"
-                >
-                  {users
-                    .filter((u) => u.id !== (movie.assignedToUser?.id ?? null))
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} | {u.role}
-                      </option>
-                    ))}
-                </select>
-                <small className="block text-text/60 mt-1">
-                  Bei Status „Im Versand“ oder später werden diese Personen per E-Mail benachrichtigt.
-                </small>
-              </label>
+              <UserChipSelector
+                users={users}
+                mode="single"
+                selectedId={primaryAssigneeId}
+                onSelect={setPrimaryAssigneeId}
+                label="Zugewiesen"
+              />
+              <UserChipSelector
+                users={users}
+                mode="multi"
+                selectedIds={additionalAssigneeIds}
+                onSelectMultiple={setAdditionalAssigneeIds}
+                excludeIds={primaryAssigneeId != null ? [primaryAssigneeId] : []}
+                label="Weitere zugewiesene (Wunschliste)"
+                hint="Bei Status „Im Versand“ oder später werden diese Personen per E-Mail benachrichtigt."
+              />
               <label className="block">
                 <span className="block text-sm text-text/70 mb-1">Status</span>
                 <select

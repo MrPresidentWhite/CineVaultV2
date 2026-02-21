@@ -6,6 +6,7 @@ import {
   SIZE_VALIDATION_ERROR_MESSAGE,
 } from "@/lib/movie-size-validation";
 import { SkeletonImage } from "@/components/ui/SkeletonImage";
+import { UserChipSelector } from "@/components/ui/UserChipSelector";
 import Link from "next/link";
 import type { Status, Priority, MediaType } from "@/generated/prisma/enums";
 
@@ -817,31 +818,22 @@ export function ImportMoviesClient({
                                 className="w-full rounded-md border border-ring bg-bg px-2 py-1 text-text outline-none focus:border-accent"
                               />
                             </label>
-                            <label className="block">
-                              <span className="mb-0.5 block text-text/70">
-                                Zugeordnet an
-                              </span>
-                              <select
-                                value={opts.assignedTo}
-                                onChange={(e) =>
-                                  setPartOptions((prev) => ({
-                                    ...prev,
-                                    [part.tmdbId]: {
-                                      ...opts,
-                                      assignedTo: e.target.value,
-                                    },
-                                  }))
-                                }
-                                className="w-full rounded-md border border-ring bg-bg px-2 py-1 text-text outline-none focus:border-accent"
-                              >
-                                <option value="">– niemand –</option>
-                                {users.map((u) => (
-                                  <option key={u.id} value={u.id}>
-                                    {u.name} | {u.role}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            <UserChipSelector
+                              users={users}
+                              mode="single"
+                              selectedId={opts.assignedTo ? Number(opts.assignedTo) : null}
+                              onSelect={(id) =>
+                                setPartOptions((prev) => ({
+                                  ...prev,
+                                  [part.tmdbId]: {
+                                    ...opts,
+                                    assignedTo: id != null ? String(id) : "",
+                                  },
+                                }))
+                              }
+                              label="Zugeordnet an"
+                              className="mb-2"
+                            />
                             <label className="block">
                               <span className="mb-0.5 block text-text/70">
                                 Größe vorher (Bytes)
@@ -1031,23 +1023,13 @@ export function ImportMoviesClient({
                         className="w-full rounded-lg border border-ring bg-bg px-3 py-2 text-text outline-none focus:border-accent"
                       />
                     </label>
-                    <label className="block">
-                      <span className="mb-1 block text-sm text-text/70">
-                        Zugeordnet an
-                      </span>
-                      <select
-                        value={assignedTo}
-                        onChange={(e) => setAssignedTo(e.target.value)}
-                        className="w-full rounded-lg border border-ring bg-bg px-3 py-2 text-text outline-none focus:border-accent"
-                      >
-                        <option value="">– niemand –</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} | {u.role}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <UserChipSelector
+                      users={users}
+                      mode="single"
+                      selectedId={assignedTo ? Number(assignedTo) : null}
+                      onSelect={(id) => setAssignedTo(id != null ? String(id) : "")}
+                      label="Zugeordnet an"
+                    />
                     <label className="block">
                       <span className="mb-1 block text-sm text-text/70">
                         Größe vorher (Bytes)
