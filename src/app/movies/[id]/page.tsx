@@ -61,10 +61,7 @@ export default async function MovieDetailPage({ params }: Props) {
       />
       <MovieInfo movie={movie} canEdit={canEdit} />
       {canEdit && (
-        <MovieEditModal
-          movie={movie}
-          users={users}
-        />
+        <MovieEditModal key={movie.id} movie={movie} users={users} />
       )}
     </>
   );

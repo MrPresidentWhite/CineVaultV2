@@ -33,11 +33,6 @@ export function MovieEditModal({ movie, users }: Props) {
     movie.additionalAssignees?.map((a) => a.user.id) ?? []
   );
 
-  useEffect(() => {
-    setPrimaryAssigneeId(movie.assignedToUser?.id ?? null);
-    setAdditionalAssigneeIds(movie.additionalAssignees?.map((a) => a.user.id) ?? []);
-  }, [movie.id]);
-
   const closeModal = () => {
     if (!modalRef.current) return;
     modalRef.current.hidden = true;
