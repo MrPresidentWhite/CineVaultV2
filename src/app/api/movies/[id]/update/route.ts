@@ -177,7 +177,10 @@ export async function POST(
       }
     }
 
-    if (oldMovie && newStatus && oldMovie.status !== newStatus) {
+    const statusChangedInRequest =
+      oldMovie && newStatus && oldMovie.status !== newStatus;
+
+    if (statusChangedInRequest) {
       await prisma.movieStatusChange.create({
         data: {
           movieId: idNum,
@@ -188,6 +191,15 @@ export async function POST(
             oldMovie.status === StatusEnum.VO_SOON ? oldMovie.statusScheduledAt : null,
         },
       });
+
+      // Zustell-Mail nur, wenn in diesem Request der Status von Auf Wunschliste → Im Versand gewechselt wurde
+      if (
+        oldMovie.status === StatusEnum.VB_WISHLIST &&
+        newStatus === StatusEnum.SHIPPING
+      ) {
+        const { notifyAdditionalAssigneesOnShipping } = await import("@/lib/notify-assignees");
+        await notifyAdditionalAssigneesOnShipping(idNum);
+      }
     }
 
     await Promise.all([
@@ -195,18 +207,6 @@ export async function POST(
       invalidateMoviesListCache(),
       invalidateHomeCache(),
     ]);
-
-    type NotifyStatus = "SHIPPING" | "PROCESSING" | "UPLOADED" | "ARCHIVED";
-    const notifyStatuses: NotifyStatus[] = [
-      StatusEnum.SHIPPING,
-      StatusEnum.PROCESSING,
-      StatusEnum.UPLOADED,
-      StatusEnum.ARCHIVED,
-    ];
-    if (newStatus && (notifyStatuses as string[]).includes(newStatus)) {
-      const { notifyAdditionalAssigneesOnStatusChange } = await import("@/lib/notify-assignees");
-      await notifyAdditionalAssigneesOnStatusChange(idNum, newStatus as NotifyStatus);
-    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
