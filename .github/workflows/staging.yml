@@ -1,7 +1,8 @@
 # Staging: Lint + Test parallel, dann Build → Staging-Report (Grok + Discord) → bei Erfolg wird Deploy getriggert
-# Läuft bei Push auf main. Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
-# "Abgebrochen" ohne Fehlermeldung: oft ein älterer Lauf, der durch concurrency abgebrochen wurde
-# (neuer Push = neuer Lauf, vorheriger wird cancelled). Im Actions-Tab den neuesten Lauf prüfen.
+# Läuft bei Push auf main, nur wenn sich relevante Projektdateien geändert haben (paths).
+# Reine Änderungen an .github/workflows, Docs, .cursor etc. lösen keinen Staging-/Deploy-Lauf aus.
+# Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
+# "Abgebrochen" ohne Fehlermeldung: oft ein älterer Lauf, der durch concurrency abgebrochen wurde.
 # Secrets: DISCORD_STAGING_WEBHOOK, GROK_API_URL, GROK_API_KEY, GROK_API_MODEL, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 
 name: Staging
@@ -9,6 +10,16 @@ name: Staging
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "prisma/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.ts"
+      - "tsconfig.json"
+      - "eslint.config.mjs"
+      - "scripts/**"
 
 concurrency:
   group: staging-main

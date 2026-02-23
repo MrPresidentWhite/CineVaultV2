@@ -1,8 +1,9 @@
 /**
  * VB-Watchdog-Job: Liest täglich (Cron 18:15) das konfigurierte E-Mail-Postfach,
  * filtert Mails von VIDEOBUSTER mit Betreff „Versandstatus“ und wertet sie aus:
- * - „folgende Titel haben wir heute dankend von dir zurückerhalten:“ → Filme UPLOADED → ARCHIVED
- * - „Neue Titel sind bereits auf dem Weg zu dir:“ → Filme VB_WISHLIST → SHIPPING
+ * - „folgende Titel haben wir heute dankend von dir zurückerhalten:“ → Filme UPLOADED → ARCHIVED, vbReceivedAt = Mail-Datum
+ * - „Neue Titel sind bereits auf dem Weg zu dir:“ → Filme VB_WISHLIST → SHIPPING, vbSentAt = Mail-Datum
+ * Als Datum wird das Ankunftsdatum der Mail im Postfach verwendet (Envelope-Datum).
  * Statusänderungen nur, wenn der aktuelle Status passt (keine unnötigen MovieStatusChange).
  * Nach vollständiger Abarbeitung wird die Mail per Checksum-Abgleich identifiziert und in den Ordner „Abgearbeitet“ verschoben.
  */
@@ -31,6 +32,23 @@ const VB_LINK_REGEX = /https:\/\/www\.videobuster\.de\/dvd-bluray-verleih\/(\d+\
 const SECTION_RETOUR = "folgende titel haben wir heute dankend von dir zurückerhalten:";
 const SECTION_SHIPPING = "neue titel sind bereits auf dem weg zu dir:";
 const SECTION_KEINE_SENDUNGEN = "keine sendungen mehr frei:";
+
+/** Frühestes akzeptables Mail-Datum (Vermeidung offensichtlich falscher Envelope-Daten). */
+const MIN_MAIL_DATE = new Date("2000-01-01T00:00:00Z");
+
+/**
+ * Validiert ein aus der Mail stammendes Datum für vbReceivedAt/vbSentAt.
+ * Gibt nur dann ein Date zurück, wenn es gültig, nicht in der Zukunft und nicht vor MIN_MAIL_DATE liegt.
+ */
+function validMailDate(candidate: Date | undefined | null): Date | null {
+  if (candidate == null || !(candidate instanceof Date)) return null;
+  const t = candidate.getTime();
+  if (Number.isNaN(t)) return null;
+  const now = Date.now();
+  if (t > now) return null;
+  if (t < MIN_MAIL_DATE.getTime()) return null;
+  return candidate;
+}
 
 /** Erzeugt eine Checksumme des Nachrichteninhalts zur eindeutigen Identifikation (z. B. vor Löschen). */
 function messageChecksum(source: Buffer | string): string {
@@ -181,7 +199,7 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
     const uidList = Array.isArray(uids) ? uids : [];
     if (uidList.length === 0) return result;
 
-    const messages = await client.fetchAll(uidList, { source: true }, { uid: true });
+    const messages = await client.fetchAll(uidList, { source: true, envelope: true }, { uid: true });
 
     for (const msg of messages) {
       let storedChecksum: string | null = null;
@@ -194,6 +212,13 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
         const rawText = parsed.text ?? "";
         const rawHtml = parsed.html ?? "";
         const text = (rawText + " " + rawHtml.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+
+        /** Mail-Datum (Ankunft im Postfach) für vbReceivedAt / vbSentAt; nur setzen wenn validiert. */
+        const rawDate =
+          typeof (msg as { envelope?: { date?: Date } }).envelope?.date === "object"
+            ? (msg as { envelope: { date: Date } }).envelope.date
+            : parsed.date ?? undefined;
+        const mailDate = validMailDate(rawDate);
 
         const { retour, shipping } = splitSections(text);
         const urlsRetour = extractVbUrls(retour).slice(0, 2);
@@ -210,13 +235,18 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
               ],
               status: StatusEnum.UPLOADED,
             },
-            select: { id: true },
+            select: { id: true, vbReceivedAt: true },
           });
           if (movie) {
+            const setReceivedAt =
+              mailDate !== null && movie.vbReceivedAt === null;
             await prisma.$transaction([
               prisma.movie.update({
                 where: { id: movie.id },
-                data: { status: StatusEnum.ARCHIVED },
+                data: {
+                  status: StatusEnum.ARCHIVED,
+                  ...(setReceivedAt && { vbReceivedAt: mailDate! }),
+                },
               }),
               prisma.movieStatusChange.create({
                 data: {
@@ -243,13 +273,17 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
               ],
               status: StatusEnum.VB_WISHLIST,
             },
-            select: { id: true },
+            select: { id: true, vbSentAt: true },
           });
           if (movie) {
+            const setSentAt = mailDate !== null && movie.vbSentAt === null;
             await prisma.$transaction([
               prisma.movie.update({
                 where: { id: movie.id },
-                data: { status: StatusEnum.SHIPPING },
+                data: {
+                  status: StatusEnum.SHIPPING,
+                  ...(setSentAt && { vbSentAt: mailDate! }),
+                },
               }),
               prisma.movieStatusChange.create({
                 data: {
