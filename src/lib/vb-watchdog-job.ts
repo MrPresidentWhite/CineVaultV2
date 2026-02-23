@@ -21,6 +21,7 @@ import {
   VB_WATCHDOG_IMAP_USER,
   VB_WATCHDOG_IMAP_PASS,
   VB_WATCHDOG_SMTP_FROM_VB_MAIL,
+  VB_WATCHDOG_DISCORD_WEBHOOK_URL,
 } from "@/lib/env";
 
 const VB_BASE = "https://www.videobuster.de/dvd-bluray-verleih/";
@@ -92,6 +93,50 @@ export type VbWatchdogResult = {
   shipping: number;
   errors: string[];
 };
+
+/** Sendet Watchdog-Ergebnis als Discord-Embed an den konfigurierten Webhook. */
+async function sendWatchdogDiscordEmbed(result: VbWatchdogResult): Promise<void> {
+  if (!VB_WATCHDOG_DISCORD_WEBHOOK_URL?.trim()) return;
+  try {
+    const hasErrors = result.errors.length > 0;
+    const color = hasErrors ? 0xe67e22 : 0x2ecc71; // Orange bei Fehlern, Grün sonst
+    const fields: { name: string; value: string; inline?: boolean }[] = [
+      { name: "Mails verarbeitet", value: String(result.processed), inline: true },
+      { name: "→ Archiviert", value: String(result.archived), inline: true },
+      { name: "→ Im Versand", value: String(result.shipping), inline: true },
+    ];
+    if (hasErrors) {
+      const errLines = result.errors
+        .slice(0, 5)
+        .map((e) => `• ${e.length > 120 ? e.slice(0, 120) + "…" : e}`);
+      const errText =
+        errLines.join("\n") +
+        (result.errors.length > 5 ? `\n… und ${result.errors.length - 5} weitere` : "");
+      fields.push({ name: "Fehler", value: errText.slice(0, 1024), inline: false });
+    }
+    const body = {
+      embeds: [
+        {
+          title: "VB-Watchdog · Versandstatus",
+          description: result.processed === 0 && !hasErrors
+            ? "Keine Versandstatus-Mails gefunden oder Postfach nicht erreichbar."
+            : `${result.processed} Mail(s) ausgewertet. ${result.archived} Film(e) auf Archiviert, ${result.shipping} Film(e) auf Im Versand gesetzt.`,
+          color,
+          fields,
+          timestamp: new Date().toISOString(),
+          footer: { text: "CineVault VB-Watchdog" },
+        },
+      ],
+    };
+    await fetch(VB_WATCHDOG_DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error("[vb-watchdog] Discord-Webhook fehlgeschlagen:", err);
+  }
+}
 
 export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
   const result: VbWatchdogResult = { processed: 0, archived: 0, shipping: 0, errors: [] };
@@ -254,5 +299,6 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
     await client.logout();
   }
 
+  await sendWatchdogDiscordEmbed(result);
   return result;
 }

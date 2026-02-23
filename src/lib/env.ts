@@ -192,6 +192,8 @@ export const VB_WATCHDOG_IMAP_USER = getEnv("VB_WATCHDOG_IMAP_USER");
 export const VB_WATCHDOG_IMAP_PASS = getEnv("VB_WATCHDOG_IMAP_PASS");
 /** Absender-Adresse, nach der gefiltert wird (z. B. bounce@videobuster.de). */
 export const VB_WATCHDOG_SMTP_FROM_VB_MAIL = getEnv("VB_WATCHDOG_SMTP_FROM_VB_MAIL");
+/** Optional: Discord-Webhook für Watchdog-Logs (Embed). */
+export const VB_WATCHDOG_DISCORD_WEBHOOK_URL = getEnv("VB_WATCHDOG_DISCORD_WEBHOOK_URL");
 
 /**
  * Gibt REDIS_URL zurück; wirft, wenn REDIS_URL fehlt und required true ist.
