@@ -1,0 +1,24 @@
+---
+alwaysApply: true
+---
+# Commit-Workflow
+
+Wenn ein Commit gewünscht wird (z. B. „commit ready“, „Commit erstellen“):
+
+## 1. Test-Build
+
+- `npm run build` ausführen.
+- Bei Fehlern: Fehler beheben und Build erneut ausführen, bis der Build erfolgreich durchläuft.
+
+## 2. Commit
+
+- **Commit-Message** aus den tatsächlichen Änderungen ableiten (geänderte Dateien/Features kurz beschreiben).
+- **UTF-8**: Umlaute und Sonderzeichen (ä, ö, ü, ß, …) in der Message sind erlaubt und erwünscht; keine künstliche ASCII-Ersetzung.
+- Alle relevanten geänderten Dateien stagen und **committen**.
+- **Nicht pushen** – der Push wird vom Nutzer selbst ausgeführt.
+
+## Kurz
+
+1. Build → bei Fehlern fixen → erneut bauen.
+2. Sinnvolle Commit-Message (UTF-8), alle Änderungen stagen, `git commit`.
+3. Kein `git push`.

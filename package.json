@@ -67,5 +67,9 @@
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.0",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "lodash": "4.17.23",
+    "hono": "4.11.10"
   }
 }
