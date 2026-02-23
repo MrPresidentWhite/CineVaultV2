@@ -183,6 +183,16 @@ export const SMTP_FROM_NAME = getEnv("SMTP_FROM_NAME");
 /* --- Discord Webhook (Status-Digest) --- */
 export const DISCORD_WEBHOOK_URL = getEnv("DISCORD_WEBHOOK_URL");
 
+/* --- VB-Watchdog (Versandstatus-E-Mails lesen, Cron 18:15) --- */
+/** IMAP-Host für das Postfach, in das VIDEOBUSTER „Versandstatus“-Mails schickt. */
+export const VB_WATCHDOG_IMAP_HOST = getEnv("VB_WATCHDOG_IMAP_HOST");
+/** IMAP-Port (typ. 993 für TLS). */
+export const VB_WATCHDOG_IMAP_PORT = Number(getEnv("VB_WATCHDOG_IMAP_PORT") ?? "993") || 993;
+export const VB_WATCHDOG_IMAP_USER = getEnv("VB_WATCHDOG_IMAP_USER");
+export const VB_WATCHDOG_IMAP_PASS = getEnv("VB_WATCHDOG_IMAP_PASS");
+/** Absender-Adresse, nach der gefiltert wird (z. B. bounce@videobuster.de). */
+export const VB_WATCHDOG_SMTP_FROM_VB_MAIL = getEnv("VB_WATCHDOG_SMTP_FROM_VB_MAIL");
+
 /**
  * Gibt REDIS_URL zurück; wirft, wenn REDIS_URL fehlt und required true ist.
  */

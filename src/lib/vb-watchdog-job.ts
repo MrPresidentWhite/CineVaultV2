@@ -1,0 +1,258 @@
+/**
+ * VB-Watchdog-Job: Liest täglich (Cron 18:15) das konfigurierte E-Mail-Postfach,
+ * filtert Mails von VIDEOBUSTER mit Betreff „Versandstatus“ und wertet sie aus:
+ * - „folgende Titel haben wir heute dankend von dir zurückerhalten:“ → Filme UPLOADED → ARCHIVED
+ * - „Neue Titel sind bereits auf dem Weg zu dir:“ → Filme VB_WISHLIST → SHIPPING
+ * Statusänderungen nur, wenn der aktuelle Status passt (keine unnötigen MovieStatusChange).
+ * Nach vollständiger Abarbeitung wird die Mail per Checksum-Abgleich identifiziert und in den Ordner „Abgearbeitet“ verschoben.
+ */
+
+import { createHash } from "node:crypto";
+import { ImapFlow } from "imapflow";
+// @ts-expect-error - mailparser has no official type definitions
+import { simpleParser } from "mailparser";
+import { prisma } from "@/lib/db";
+import { Status as StatusEnum } from "@/generated/prisma/enums";
+import { invalidateMovieCache, invalidateMoviesListCache } from "@/lib/movie-data";
+import { invalidateHomeCache } from "@/lib/home-data";
+import {
+  VB_WATCHDOG_IMAP_HOST,
+  VB_WATCHDOG_IMAP_PORT,
+  VB_WATCHDOG_IMAP_USER,
+  VB_WATCHDOG_IMAP_PASS,
+  VB_WATCHDOG_SMTP_FROM_VB_MAIL,
+} from "@/lib/env";
+
+const VB_BASE = "https://www.videobuster.de/dvd-bluray-verleih/";
+/** Erkennt dvd-bluray-verleih-URLs; Gruppe 1 = ID/Slug (z. B. 63232/der-schuh-des-manitu). */
+const VB_LINK_REGEX = /https:\/\/www\.videobuster\.de\/dvd-bluray-verleih\/(\d+\/[a-z0-9-]+)/gi;
+
+const SECTION_RETOUR = "folgende titel haben wir heute dankend von dir zurückerhalten:";
+const SECTION_SHIPPING = "neue titel sind bereits auf dem weg zu dir:";
+const SECTION_KEINE_SENDUNGEN = "keine sendungen mehr frei:";
+
+/** Erzeugt eine Checksumme des Nachrichteninhalts zur eindeutigen Identifikation (z. B. vor Löschen). */
+function messageChecksum(source: Buffer | string): string {
+  const buf = typeof source === "string" ? Buffer.from(source, "utf-8") : source;
+  return createHash("sha256").update(buf).digest("hex");
+}
+
+/** Extrahiert alle VB-dvd-bluray-verleih-URLs aus einem Text; gibt normalisierte Basis-URLs zurück (ohne Duplikate, Reihenfolge). */
+function extractVbUrls(text: string): string[] {
+  if (!text || typeof text !== "string") return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  VB_LINK_REGEX.lastIndex = 0;
+  while ((m = VB_LINK_REGEX.exec(text)) !== null) {
+    const norm = VB_BASE + m[1].toLowerCase();
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      out.push(norm);
+    }
+  }
+  VB_LINK_REGEX.lastIndex = 0;
+  return out;
+}
+
+/** Teilt den Mail-Text in Abschnitte: [retour], [shipping]. Jeder Abschnitt enthält nur den Text bis zum nächsten Abschnitt. */
+function splitSections(text: string): { retour: string; shipping: string } {
+  const lower = text.toLowerCase().replace(/\s+/g, " ").trim();
+  let retour = "";
+  let shipping = "";
+
+  const idxRetour = lower.indexOf(SECTION_RETOUR);
+  const idxShipping = lower.indexOf(SECTION_SHIPPING);
+  const idxKeine = lower.indexOf(SECTION_KEINE_SENDUNGEN);
+
+  if (idxRetour >= 0) {
+    const endRetour =
+      idxShipping >= 0 ? idxShipping : idxKeine >= 0 ? idxKeine : text.length;
+    retour = text.slice(idxRetour, endRetour);
+  }
+  if (idxShipping >= 0) {
+    shipping = text.slice(idxShipping);
+  }
+
+  return { retour, shipping };
+}
+
+function isWatchdogConfigured(): boolean {
+  return Boolean(
+    VB_WATCHDOG_IMAP_HOST &&
+      VB_WATCHDOG_IMAP_USER &&
+      VB_WATCHDOG_IMAP_PASS &&
+      VB_WATCHDOG_SMTP_FROM_VB_MAIL
+  );
+}
+
+export type VbWatchdogResult = {
+  processed: number;
+  archived: number;
+  shipping: number;
+  errors: string[];
+};
+
+export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
+  const result: VbWatchdogResult = { processed: 0, archived: 0, shipping: 0, errors: [] };
+
+  if (!isWatchdogConfigured()) {
+    return result;
+  }
+
+  const client = new ImapFlow({
+    host: VB_WATCHDOG_IMAP_HOST!,
+    port: VB_WATCHDOG_IMAP_PORT,
+    secure: true,
+    auth: {
+      user: VB_WATCHDOG_IMAP_USER!,
+      pass: VB_WATCHDOG_IMAP_PASS!,
+    },
+    logger: false,
+  });
+
+  try {
+    await client.connect();
+  } catch (e) {
+    result.errors.push(`IMAP-Verbindung fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}`);
+    return result;
+  }
+
+  let lock: { release: () => void } | null = null;
+  try {
+    lock = await client.getMailboxLock("INBOX");
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+
+    const uids = await client.search(
+      {
+        from: VB_WATCHDOG_SMTP_FROM_VB_MAIL!,
+        subject: "Versandstatus",
+        since,
+      },
+      { uid: true }
+    );
+
+    const uidList = Array.isArray(uids) ? uids : [];
+    if (uidList.length === 0) return result;
+
+    const messages = await client.fetchAll(uidList, { source: true }, { uid: true });
+
+    for (const msg of messages) {
+      let storedChecksum: string | null = null;
+      try {
+        if (!msg?.source) continue;
+
+        storedChecksum = messageChecksum(msg.source);
+
+        const parsed = await simpleParser(msg.source);
+        const rawText = parsed.text ?? "";
+        const rawHtml = parsed.html ?? "";
+        const text = (rawText + " " + rawHtml.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+
+        const { retour, shipping } = splitSections(text);
+        const urlsRetour = extractVbUrls(retour).slice(0, 2);
+        const urlsShipping = extractVbUrls(shipping).slice(0, 2);
+
+        for (const normalizedUrl of urlsRetour) {
+          const movie = await prisma.movie.findFirst({
+            where: {
+              videobusterUrl: { not: null },
+              OR: [
+                { videobusterUrl: normalizedUrl },
+                { videobusterUrl: { startsWith: normalizedUrl + "#" } },
+                { videobusterUrl: { startsWith: normalizedUrl + "?" } },
+              ],
+              status: StatusEnum.UPLOADED,
+            },
+            select: { id: true },
+          });
+          if (movie) {
+            await prisma.$transaction([
+              prisma.movie.update({
+                where: { id: movie.id },
+                data: { status: StatusEnum.ARCHIVED },
+              }),
+              prisma.movieStatusChange.create({
+                data: {
+                  movieId: movie.id,
+                  from: StatusEnum.UPLOADED,
+                  to: StatusEnum.ARCHIVED,
+                  changedBy: null,
+                },
+              }),
+            ]);
+            await invalidateMovieCache(movie.id);
+            result.archived++;
+          }
+        }
+
+        for (const normalizedUrl of urlsShipping) {
+          const movie = await prisma.movie.findFirst({
+            where: {
+              videobusterUrl: { not: null },
+              OR: [
+                { videobusterUrl: normalizedUrl },
+                { videobusterUrl: { startsWith: normalizedUrl + "#" } },
+                { videobusterUrl: { startsWith: normalizedUrl + "?" } },
+              ],
+              status: StatusEnum.VB_WISHLIST,
+            },
+            select: { id: true },
+          });
+          if (movie) {
+            await prisma.$transaction([
+              prisma.movie.update({
+                where: { id: movie.id },
+                data: { status: StatusEnum.SHIPPING },
+              }),
+              prisma.movieStatusChange.create({
+                data: {
+                  movieId: movie.id,
+                  from: StatusEnum.VB_WISHLIST,
+                  to: StatusEnum.SHIPPING,
+                  changedBy: null,
+                },
+              }),
+            ]);
+            await invalidateMovieCache(movie.id);
+            result.shipping++;
+          }
+        }
+
+        result.processed++;
+
+        if (storedChecksum) {
+          try {
+            const refetch = await client.fetchOne(
+              msg.uid,
+              { source: true },
+              { uid: true }
+            );
+            const refetchSource = refetch && "source" in refetch ? refetch.source : undefined;
+            if (refetchSource && messageChecksum(refetchSource) === storedChecksum) {
+              await client.messageMove(msg.uid, "Abgearbeitet", { uid: true });
+            }
+          } catch (moveErr) {
+            result.errors.push(
+              `Verschieben UID ${msg.uid} nach Abgearbeitet: ${moveErr instanceof Error ? moveErr.message : String(moveErr)}`
+            );
+          }
+        } else {
+          await client.messageFlagsAdd(msg.uid, ["\\Seen"], { uid: true });
+        }
+      } catch (e) {
+        result.errors.push(`Nachricht ${msg?.uid ?? "?"}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    if (result.archived > 0 || result.shipping > 0) {
+      await Promise.all([invalidateMoviesListCache(), invalidateHomeCache()]);
+    }
+  } finally {
+    lock?.release();
+    await client.logout();
+  }
+
+  return result;
+}

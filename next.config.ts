@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
+// Standalone unter Windows deaktivieren (Chunk-Dateinamen mit [:] führen zu EINVAL copyfile)
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.platform === "win32" ? undefined : "standalone",
   reactCompiler: true,
   // colorthief nicht bündeln, damit Node zur Laufzeit die CJS-Node-Version (dist/color-thief.js) lädt (Buffer-Support für accent.ts).
   serverExternalPackages: ["colorthief"],

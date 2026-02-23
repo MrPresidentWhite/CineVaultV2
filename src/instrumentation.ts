@@ -7,6 +7,7 @@
  * - Digest-View-Token-Cleanup (abgelaufene „Im Browser öffnen“-Links) täglich 3:05 Uhr
  * - Status-Digest (E-Mail + Discord) täglich 10:00 und 21:00 Uhr
  * - Status-Scheduled (VÖ: Demnächst → Auf Wunschliste) täglich 6:00 Uhr
+ * - VB-Watchdog (Versandstatus-E-Mails lesen, UPLOADED→ARCHIVED, VB_WISHLIST→SHIPPING) täglich 18:15 Uhr
  * - CDN-Warmup alle N Minuten (wenn WARMUP_ENABLED=1)
  */
 
@@ -112,6 +113,34 @@ export async function register() {
     },
     opts
   );
+
+  const vbWatchdogConfigured =
+    process.env.VB_WATCHDOG_IMAP_HOST &&
+    process.env.VB_WATCHDOG_IMAP_USER &&
+    process.env.VB_WATCHDOG_IMAP_PASS &&
+    process.env.VB_WATCHDOG_SMTP_FROM_VB_MAIL;
+  if (vbWatchdogConfigured) {
+    cron.default.schedule(
+      "15 18 * * *",
+      async () => {
+        try {
+          const { runVbWatchdogJob } = await import("@/lib/vb-watchdog-job");
+          const result = await runVbWatchdogJob();
+          if (result.processed > 0 || result.archived > 0 || result.shipping > 0) {
+            console.log(
+              `[cron] VB-Watchdog: ${result.processed} Mails, ${result.archived}→Archiviert, ${result.shipping}→Im Versand`
+            );
+          }
+          if (result.errors.length > 0) {
+            console.warn("[cron] VB-Watchdog Fehler:", result.errors);
+          }
+        } catch (e) {
+          console.error("[cron] VB-Watchdog fehlgeschlagen:", e);
+        }
+      },
+      opts
+    );
+  }
 
   const warmupEnabled = process.env.WARMUP_ENABLED === "1";
   const warmupMinutes = Math.max(
