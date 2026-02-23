@@ -331,7 +331,10 @@ export async function sendStatusDigestJob(): Promise<void> {
 
         await sendEmail({
           to: user.email,
-          subject: `CineVault • Es wurden ${relevantSummaries.length} Film${relevantSummaries.length === 1 ? "" : "e"} aktualisiert.`,
+          subject:
+            relevantSummaries.length === 1
+              ? "CineVault • Es wurde 1 Film aktualisiert."
+              : `CineVault • Es wurden ${relevantSummaries.length} Filme aktualisiert.`,
           html,
         });
         sentCount++;
