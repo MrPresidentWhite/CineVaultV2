@@ -2,7 +2,9 @@
  * VB-Watchdog-Job: Liest täglich (Cron 18:15) das konfigurierte E-Mail-Postfach,
  * filtert Mails von VIDEOBUSTER mit Betreff „Versandstatus“ und wertet sie aus:
  * - „folgende Titel haben wir heute dankend von dir zurückerhalten:“ → Filme UPLOADED → ARCHIVED, vbReceivedAt = Mail-Datum
+ *   Fallback: Ist der Film bereits ARCHIVED (manuell), wird nur vbReceivedAt gesetzt, wenn noch null.
  * - „Neue Titel sind bereits auf dem Weg zu dir:“ → Filme VB_WISHLIST → SHIPPING, vbSentAt = Mail-Datum
+ *   Fallback: Ist der Film bereits SHIPPING (manuell), wird nur vbSentAt gesetzt, wenn noch null.
  * Als Datum wird das Ankunftsdatum der Mail im Postfach verwendet (Envelope-Datum).
  * Statusänderungen nur, wenn der aktuelle Status passt (keine unnötigen MovieStatusChange).
  * Nach vollständiger Abarbeitung wird die Mail per Checksum-Abgleich identifiziert und in den Ordner „Abgearbeitet“ verschoben.
@@ -26,8 +28,8 @@ import {
 } from "@/lib/env";
 
 const VB_BASE = "https://www.videobuster.de/dvd-bluray-verleih/";
-/** Erkennt dvd-bluray-verleih-URLs; Gruppe 1 = ID/Slug (z. B. 63232/der-schuh-des-manitu). */
-const VB_LINK_REGEX = /https:\/\/www\.videobuster\.de\/dvd-bluray-verleih\/(\d+\/[a-z0-9-]+)/gi;
+/** Erkennt dvd-bluray-verleih-URLs; Gruppe 1 = ID/Slug (Groß-/Kleinschreibung wird beim Normalisieren auf kleingeschrieben). */
+const VB_LINK_REGEX = /https:\/\/www\.videobuster\.de\/dvd-bluray-verleih\/(\d+\/[a-zA-Z0-9-]+)/gi;
 
 const SECTION_RETOUR = "folgende titel haben wir heute dankend von dir zurückerhalten:";
 const SECTION_SHIPPING = "neue titel sind bereits auf dem weg zu dir:";
@@ -114,7 +116,14 @@ export type VbWatchdogResult = {
 
 /** Sendet Watchdog-Ergebnis als Discord-Embed an den konfigurierten Webhook. */
 async function sendWatchdogDiscordEmbed(result: VbWatchdogResult): Promise<void> {
-  if (!VB_WATCHDOG_DISCORD_WEBHOOK_URL?.trim()) return;
+  if (!VB_WATCHDOG_DISCORD_WEBHOOK_URL?.trim()) {
+    if (result.processed > 0 || result.errors.length > 0) {
+      console.warn(
+        "[vb-watchdog] Discord-Webhook nicht konfiguriert (VB_WATCHDOG_DISCORD_WEBHOOK_URL); Ergebnis nicht an Discord gesendet."
+      );
+    }
+    return;
+  }
   try {
     const hasErrors = result.errors.length > 0;
     const color = hasErrors ? 0xe67e22 : 0x2ecc71; // Orange bei Fehlern, Grün sonst
@@ -221,19 +230,29 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
         const mailDate = validMailDate(rawDate);
 
         const { retour, shipping } = splitSections(text);
-        const urlsRetour = extractVbUrls(retour).slice(0, 2);
-        const urlsShipping = extractVbUrls(shipping).slice(0, 2);
+        const urlsRetour = extractVbUrls(retour);
+        const urlsShipping = extractVbUrls(shipping);
 
         for (const normalizedUrl of urlsRetour) {
           const movie = await prisma.movie.findFirst({
             where: {
+              status: StatusEnum.UPLOADED,
               videobusterUrl: { not: null },
               OR: [
-                { videobusterUrl: normalizedUrl },
-                { videobusterUrl: { startsWith: normalizedUrl + "#" } },
-                { videobusterUrl: { startsWith: normalizedUrl + "?" } },
+                { videobusterUrl: { equals: normalizedUrl, mode: "insensitive" } },
+                {
+                  videobusterUrl: {
+                    startsWith: normalizedUrl + "#",
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  videobusterUrl: {
+                    startsWith: normalizedUrl + "?",
+                    mode: "insensitive",
+                  },
+                },
               ],
-              status: StatusEnum.UPLOADED,
             },
             select: { id: true, vbReceivedAt: true },
           });
@@ -259,19 +278,61 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
             ]);
             await invalidateMovieCache(movie.id);
             result.archived++;
+          } else if (mailDate !== null) {
+            /** Bereits manuell archiviert? Nur vbReceivedAt nachtragen, wenn noch null. */
+            const alreadyArchived = await prisma.movie.findFirst({
+              where: {
+                status: StatusEnum.ARCHIVED,
+                videobusterUrl: { not: null },
+                vbReceivedAt: null,
+                OR: [
+                  { videobusterUrl: { equals: normalizedUrl, mode: "insensitive" } },
+                  {
+                    videobusterUrl: {
+                      startsWith: normalizedUrl + "#",
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    videobusterUrl: {
+                      startsWith: normalizedUrl + "?",
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+              select: { id: true },
+            });
+            if (alreadyArchived) {
+              await prisma.movie.update({
+                where: { id: alreadyArchived.id },
+                data: { vbReceivedAt: mailDate },
+              });
+              await invalidateMovieCache(alreadyArchived.id);
+            }
           }
         }
 
         for (const normalizedUrl of urlsShipping) {
           const movie = await prisma.movie.findFirst({
             where: {
+              status: StatusEnum.VB_WISHLIST,
               videobusterUrl: { not: null },
               OR: [
-                { videobusterUrl: normalizedUrl },
-                { videobusterUrl: { startsWith: normalizedUrl + "#" } },
-                { videobusterUrl: { startsWith: normalizedUrl + "?" } },
+                { videobusterUrl: { equals: normalizedUrl, mode: "insensitive" } },
+                {
+                  videobusterUrl: {
+                    startsWith: normalizedUrl + "#",
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  videobusterUrl: {
+                    startsWith: normalizedUrl + "?",
+                    mode: "insensitive",
+                  },
+                },
               ],
-              status: StatusEnum.VB_WISHLIST,
             },
             select: { id: true, vbSentAt: true },
           });
@@ -296,6 +357,38 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
             ]);
             await invalidateMovieCache(movie.id);
             result.shipping++;
+          } else if (mailDate !== null) {
+            /** Bereits manuell auf Im Versand? Nur vbSentAt nachtragen, wenn noch null. */
+            const alreadyShipping = await prisma.movie.findFirst({
+              where: {
+                status: StatusEnum.SHIPPING,
+                videobusterUrl: { not: null },
+                vbSentAt: null,
+                OR: [
+                  { videobusterUrl: { equals: normalizedUrl, mode: "insensitive" } },
+                  {
+                    videobusterUrl: {
+                      startsWith: normalizedUrl + "#",
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    videobusterUrl: {
+                      startsWith: normalizedUrl + "?",
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+              select: { id: true },
+            });
+            if (alreadyShipping) {
+              await prisma.movie.update({
+                where: { id: alreadyShipping.id },
+                data: { vbSentAt: mailDate },
+              });
+              await invalidateMovieCache(alreadyShipping.id);
+            }
           }
         }
 
