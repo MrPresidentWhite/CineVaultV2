@@ -64,12 +64,13 @@
     "prisma": "^7.3.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5",
+    "typescript": "5.9.3",
     "vite-tsconfig-paths": "^6.1.0",
     "vitest": "^4.0.18"
   },
   "overrides": {
     "lodash": "4.17.23",
-    "hono": "4.11.10"
+    "hono": "4.11.10",
+    "fast-xml-parser": "5.3.8"
   }
 }
