@@ -14,6 +14,7 @@
     "db:studio": "prisma studio",
     "db:import-mysql": "tsx scripts/migrate-mysql-to-postgres.ts",
     "db:link-collections": "tsx scripts/link-movie-collections.ts",
+    "db:clean-collections": "tsx scripts/clean-movie-collections.ts",
     "logo:svg-to-png": "node scripts/convert-logo-svg-to-png.mjs",
     "generate:server-actions-key": "node -e \"console.log('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' + require('crypto').randomBytes(32).toString('hex'))\"",
     "test": "vitest run",
