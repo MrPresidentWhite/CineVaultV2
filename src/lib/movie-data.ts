@@ -187,7 +187,7 @@ export async function getMovieById(id: number): Promise<MovieDetail | null> {
 /** Invalidate movie detail cache (e.g. after update). */
 export async function invalidateMovieCache(id: number): Promise<void> {
   const { cacheDelete } = await import("@/lib/cache");
-  await cacheDelete(`movie:detail:${id}:v1`);
+  await cacheDelete(`movie:detail:${id}:v2`);
 }
 
 /** Invalidate movies list cache (e.g. after update/delete). */
