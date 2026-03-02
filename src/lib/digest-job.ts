@@ -53,12 +53,14 @@ function filterMeaningfulSteps(steps: StepInput[]): StepInput[] {
   for (let i = 0; i < steps.length; i++) {
     const curr = steps[i];
     const statusKey = String(curr.status);
+    const isLastStep = i === steps.length - 1;
 
     // 1. Consecutive duplicate: skip
     if (result.length > 0 && result[result.length - 1].status === curr.status) continue;
 
     // 2. Oscillation: status already seen and last was different → cycle, skip
-    if (seen.has(statusKey)) {
+    // Ausnahme: den letzten Schritt niemals unterdrücken – finaler Status soll immer sichtbar bleiben.
+    if (!isLastStep && seen.has(statusKey)) {
       const prev = result[result.length - 1];
       if (prev && String(prev.status) !== statusKey) continue;
     }

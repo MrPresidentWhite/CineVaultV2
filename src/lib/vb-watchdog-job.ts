@@ -357,6 +357,18 @@ export async function runVbWatchdogJob(): Promise<VbWatchdogResult> {
             ]);
             await invalidateMovieCache(movie.id);
             result.shipping++;
+
+            // Zusätzliche Zugewiesene benachrichtigen (wie bei manuellem Statuswechsel VB_WISHLIST → SHIPPING).
+            try {
+              const { notifyAdditionalAssigneesOnShipping } = await import("@/lib/notify-assignees");
+              await notifyAdditionalAssigneesOnShipping(movie.id);
+            } catch (notifyErr) {
+              result.errors.push(
+                `Notify additional assignees for movie ${movie.id}: ${
+                  notifyErr instanceof Error ? notifyErr.message : String(notifyErr)
+                }`
+              );
+            }
           } else if (mailDate !== null) {
             /** Bereits manuell auf Im Versand? Nur vbSentAt nachtragen, wenn noch null. */
             const alreadyShipping = await prisma.movie.findFirst({
