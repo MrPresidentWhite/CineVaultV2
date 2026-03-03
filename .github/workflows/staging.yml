@@ -1,9 +1,9 @@
-# Staging: Lint + Test parallel, dann Build → Staging-Report (Grok + Discord) → bei Erfolg wird Deploy getriggert
+# Staging: Lint + Test parallel, dann Build → Staging-Report (Discord) → bei Erfolg wird Deploy getriggert
 # Läuft bei Push auf main, nur wenn sich relevante Projektdateien geändert haben (paths).
 # Reine Änderungen an .github/workflows, Docs, .cursor etc. lösen keinen Staging-/Deploy-Lauf aus.
 # Deploy-Workflow startet nur, wenn Staging erfolgreich durchläuft.
 # "Abgebrochen" ohne Fehlermeldung: oft ein älterer Lauf, der durch concurrency abgebrochen wurde.
-# Secrets: DISCORD_STAGING_WEBHOOK, GROK_API_URL, GROK_API_KEY, GROK_API_MODEL, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+# Secrets: DISCORD_STAGING_WEBHOOK, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 
 name: Staging
 
@@ -203,36 +203,7 @@ jobs:
         continue-on-error: true
         run: node scripts/staging-logging-check.mjs logging-check.txt || exit 1
 
-      - name: Job-Logs herunterladen (für Discord-Anhang)
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p _joblogs && cd _joblogs
-          JOBS_JSON=$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs")
-          JOB_ID=$(echo "$JOBS_JSON" | jq -r '.jobs[] | select(.name == "build") | .id // empty' | head -1)
-          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
-            JOB_ID=$(echo "$JOBS_JSON" | jq -r '.jobs[0].id // empty')
-          fi
-          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
-            echo "Job-ID nicht gefunden." > staging-job-logs.txt
-          else
-            curl -sSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/jobs/${JOB_ID}/logs" -o logs.zip
-            if [ -f logs.zip ] && [ -s logs.zip ]; then
-              unzip -o -q logs.zip 2>/dev/null || true
-              find . -type f ! -name "*.zip" 2>/dev/null | sort -V | while read -r f; do
-                echo "--- ${f} ---" >> staging-job-logs.txt
-                cat "$f" 2>/dev/null >> staging-job-logs.txt
-                echo "" >> staging-job-logs.txt
-              done
-            fi
-          fi
-          [ -s staging-job-logs.txt ] || echo "Keine Logs verfügbar." > staging-job-logs.txt
-          mv staging-job-logs.txt .. && cd .. && rm -rf _joblogs
-
-      - name: Staging-Report an Discord (mit Grok + Log-Anhang)
+      - name: Staging-Report an Discord
         if: always()
         env:
           LINT_OUTCOME: ${{ needs.lint.result }}
@@ -240,10 +211,7 @@ jobs:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           LOGGING_CHECK_OUTCOME: ${{ steps.logging-check.outcome }}
           DISCORD_STAGING_WEBHOOK: ${{ secrets.DISCORD_STAGING_WEBHOOK }}
-          GROK_API_URL: ${{ secrets.GROK_API_URL }}
-          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
-          GROK_API_MODEL: ${{ secrets.GROK_API_MODEL }}
-        run: node scripts/staging-report-discord.mjs lint.txt test.txt build.txt logging-check.txt staging-job-logs.txt
+        run: node scripts/staging-report-discord.mjs lint.txt test.txt build.txt logging-check.txt
 
       - name: Staging fehlgeschlagen
         if: always() && (needs.lint.result == 'failure' || needs.test.result == 'failure' || steps.build.outcome == 'failure' || steps.logging-check.outcome == 'failure')

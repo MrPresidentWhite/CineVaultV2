@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
- * Staging Report → Grok (KI-Einschätzung) → Discord Webhook
- * Liest Lint-, Test- und Build-Ausgabe, baut Kurzfassung, holt Grok-Einschätzung, sendet Embed an DISCORD_STAGING_WEBHOOK.
- * Env: LINT_OUTCOME, TEST_OUTCOME, BUILD_OUTCOME, LOGGING_CHECK_OUTCOME, DISCORD_STAGING_WEBHOOK, GROK_API_*
- * Usage: node scripts/staging-report-discord.mjs [lint.txt] [test.txt] [build.txt] [logging-check.txt] [staging-job-logs.txt]
- * Wenn das 5. Arg eine Log-Datei ist, wird sie als Anhang an Discord gesendet.
+ * Staging Report → Discord Webhook
+ * Liest Lint-, Test-, Build- und Logging-Check-Ausgabe und sendet einen Embed an DISCORD_STAGING_WEBHOOK.
+ * Env: LINT_OUTCOME, TEST_OUTCOME, BUILD_OUTCOME, LOGGING_CHECK_OUTCOME, DISCORD_STAGING_WEBHOOK
+ * Usage: node scripts/staging-report-discord.mjs [lint.txt] [test.txt] [build.txt] [logging-check.txt]
  */
 
 import { readFileSync, existsSync } from "fs";
@@ -13,7 +12,6 @@ const LINT_PATH = process.argv[2] || "lint.txt";
 const TEST_PATH = process.argv[3] || "test.txt";
 const BUILD_PATH = process.argv[4] || "build.txt";
 const LOGGING_CHECK_PATH = process.argv[5] || "logging-check.txt";
-const JOB_LOGS_PATH = process.argv[6] || "";
 
 function readTail(path, maxLines = 40) {
   if (!path || !existsSync(path)) return null;
@@ -60,89 +58,11 @@ function parseTestOutput(content) {
   return { passed, failed, total, ok };
 }
 
-function buildSummaryText(
-  lintOutcome,
-  testOutcome,
-  buildOutcome,
-  loggingCheckOutcome,
-  lintTail,
-  testTail,
-  buildTail,
-  loggingCheckContent
-) {
-  const lines = [
-    `Lint: ${outcomeLabel(lintOutcome)}`,
-    `Tests: ${outcomeLabel(testOutcome)}`,
-    `Build: ${outcomeLabel(buildOutcome)}`,
-    `Logging-Check: ${outcomeLabel(loggingCheckOutcome)}`,
-  ];
-  if (lintTail) lines.push("\n--- Lint (Auszug) ---\n" + lintTail);
-  if (testTail) lines.push("\n--- Tests (Auszug) ---\n" + testTail);
-  if (buildTail) lines.push("\n--- Build (Auszug) ---\n" + buildTail);
-  if (loggingCheckContent) lines.push("\n--- Logging-Check ---\n" + loggingCheckContent);
-  return lines.join("\n").slice(0, 6000);
-}
-
-async function callGrok(summaryText, allPassed) {
-  const url = process.env.GROK_API_URL?.trim();
-  const key = process.env.GROK_API_KEY?.trim();
-  const model = process.env.GROK_API_MODEL?.trim();
-  if (!url || !key || !model) return null;
-
-  const chatUrl = url.includes("/chat/completions")
-    ? url
-    : url.replace(/\/?$/, "/v1/chat/completions");
-
-  const body = {
-    model,
-    messages: [
-      {
-        role: "system",
-        content:
-          "Du bist ein DevOps-/CI-Assistent. Antworte nur auf Deutsch, kurz (2–4 Sätze). Keine generischen Ratschläge, nur konkrete Einschätzung zum Staging-Ergebnis.",
-      },
-      {
-        role: "user",
-        content: allPassed
-          ? `Staging-Check vor Deployment: Lint, Tests und Build sind alle erfolgreich durchgelaufen.\n\nKurze Einschätzung: Ist das Release bereit für Deployment? Nur 2–4 Sätze.`
-          : `Staging-Check vor Deployment – mindestens ein Schritt ist fehlgeschlagen:\n\n${summaryText}\n\nWas ist das Problem und was sollte als Nächstes getan werden? Nur sachliche Einschätzung in 2–4 Sätzen.`,
-      },
-    ],
-    max_tokens: 300,
-  };
-
-  try {
-    const res = await fetch(chatUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const t = await res.text();
-      console.error("Grok API Fehler:", res.status, t.slice(0, 200));
-      return null;
-    }
-    const data = await res.json();
-    const content =
-      data.choices?.[0]?.message?.content ??
-      data.choices?.[0]?.text ??
-      data.output?.choices?.[0]?.message?.content;
-    return typeof content === "string" ? content.trim() : null;
-  } catch (e) {
-    console.error("Grok Request fehlgeschlagen:", e.message);
-    return null;
-  }
-}
-
 function buildDiscordPayload(
   lintOutcome,
   testOutcome,
   buildOutcome,
   loggingCheckOutcome,
-  grokSummary,
   testResult,
   loggingCheckContent
 ) {
@@ -198,50 +118,21 @@ function buildDiscordPayload(
 
   if (runUrl) embed.url = runUrl;
 
-  // KI-Einschätzung als Nachricht (content), nicht im Embed – weniger Abschneiden, Discord-Markdown
-  const MAX_CONTENT_LEN = 2000;
   const payload = { embeds: [embed] };
-  if (grokSummary && grokSummary.length > 0) {
-    const block = `**🚀 KI-Einschätzung (Grok)**\n\n${grokSummary}`;
-    payload.content = block.length > MAX_CONTENT_LEN ? block.slice(0, MAX_CONTENT_LEN - 1) + "…" : block;
-  }
   return payload;
 }
 
-/** Discord-Dateilimit für Webhook-Anhang (8 MB, unter 25 MB Limit). */
-const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
-
-async function sendDiscord(payload, logFilePath) {
+async function sendDiscord(payload) {
   const webhook = process.env.DISCORD_STAGING_WEBHOOK?.trim();
   if (!webhook) {
     console.error("DISCORD_STAGING_WEBHOOK nicht gesetzt.");
     process.exit(1);
   }
 
-  const hasAttachment = logFilePath && existsSync(logFilePath);
-  let body;
-  let headers = {};
-
-  if (hasAttachment) {
-    let logContent = readFileSync(logFilePath, "utf8");
-    if (Buffer.byteLength(logContent, "utf8") > MAX_ATTACHMENT_BYTES) {
-      const cut = "... [gekürzt, nur letzte 8 MB] ...\n\n";
-      logContent = cut + logContent.slice(-(MAX_ATTACHMENT_BYTES - Buffer.byteLength(cut, "utf8")));
-    }
-    const form = new FormData();
-    form.append("payload_json", JSON.stringify(payload));
-    form.append("file", new Blob([logContent], { type: "text/plain" }), "staging-job-logs.txt");
-    body = form;
-    // Content-Type mit Boundary setzt der Browser/Node bei FormData
-  } else {
-    body = JSON.stringify(payload);
-    headers["Content-Type"] = "application/json";
-  }
-
   const res = await fetch(webhook, {
     method: "POST",
-    headers,
-    body,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
@@ -249,7 +140,7 @@ async function sendDiscord(payload, logFilePath) {
     console.error("Discord Webhook Fehler:", res.status, t.slice(0, 200));
     process.exit(1);
   }
-  console.log("Staging-Report an Discord gesendet." + (hasAttachment ? " (Log-Datei angehängt)" : ""));
+  console.log("Staging-Report an Discord gesendet.");
 }
 
 function readFull(path) {
@@ -273,37 +164,15 @@ async function main() {
   const loggingCheckContent = readFull(LOGGING_CHECK_PATH);
 
   const testResult = testTail ? parseTestOutput(testTail) : null;
-  const loggingCheckPassed = loggingCheckOutcome === "success";
-  const allPassed =
-    lintOutcome === "success" &&
-    testOutcome === "success" &&
-    buildOutcome === "success" &&
-    loggingCheckPassed;
-  const summaryText = buildSummaryText(
-    lintOutcome,
-    testOutcome,
-    buildOutcome,
-    loggingCheckOutcome,
-    lintTail,
-    testTail,
-    buildTail,
-    loggingCheckContent
-  );
-
-  let grokSummary = null;
-  grokSummary = await callGrok(summaryText, allPassed);
-
   const payload = buildDiscordPayload(
     lintOutcome,
     testOutcome,
     buildOutcome,
     loggingCheckOutcome,
-    grokSummary,
     testResult,
     loggingCheckContent
   );
-  const attachLogs = !allPassed && (JOB_LOGS_PATH || "");
-  await sendDiscord(payload, attachLogs || undefined);
+  await sendDiscord(payload);
 }
 
 main().catch((e) => {
