@@ -308,7 +308,8 @@ export function ApiKeyListSection({ refetchTrigger = 0 }: Props) {
         )}
         {keys.length === 0 && !error ? (
           <p className="mt-2 text-sm text-text/60">
-            Noch keine SSH-Keys gespeichert. Lade oben einen Key hoch.
+            Noch keine SSH-Public-Keys für die API hinterlegt. Lade oben deinen
+            öffentlichen Key hoch.
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">

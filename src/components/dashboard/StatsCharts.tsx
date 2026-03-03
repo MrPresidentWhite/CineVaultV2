@@ -140,15 +140,7 @@ export function StatsCharts({
             <p>Anzahl Filme pro FSK.</p>
             <p>
               <span className="font-medium text-text/70">Unbekannt</span>: Filme
-              mit Status{" "}
-              <span className="font-medium text-text/70">
-                VÖ: Unbekannt
-              </span>{" "}
-              oder{" "}
-              <span className="font-medium text-text/70">
-                VÖ: Demnächst
-              </span>{" "}
-              (noch nicht veröffentlicht).
+              ohne gespeicherte FSK-Einstufung (kein FSK-Wert in der Datenbank).
             </p>
           </div>
         }

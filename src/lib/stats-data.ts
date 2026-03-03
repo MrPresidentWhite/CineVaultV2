@@ -81,7 +81,7 @@ export async function getStats(): Promise<StatsUi> {
       prisma.collection.count(),
       prisma.movie.groupBy({
         by: ["fsk"],
-        _count: { fsk: true },
+        _count: { _all: true },
       }),
       prisma.movie.groupBy({
         by: ["mediaType"],
@@ -126,7 +126,7 @@ export async function getStats(): Promise<StatsUi> {
   };
   fskGroups.forEach((g) => {
     const key = g.fsk === null ? "null" : String(g.fsk);
-    fskBuckets[key] = g._count.fsk;
+    fskBuckets[key] = g._count._all;
   });
   const FSK_ORDER = [0, 6, 12, 16, 18, null] as const;
   const fskLabels = FSK_ORDER.map((v) =>

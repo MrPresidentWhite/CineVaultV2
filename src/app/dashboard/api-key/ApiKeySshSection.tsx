@@ -133,10 +133,16 @@ export function ApiKeySshSection({ onSuccess }: Props) {
 
   return (
     <section className="rounded-xl border border-ring bg-panel p-6">
-      <h2 className="text-lg font-semibold text-text">SSH-Key</h2>
+      <h2 className="text-lg font-semibold text-text">SSH-Public-Key</h2>
       <p className="mt-1 text-sm text-text/60">
-        Öffentlichen oder privaten SSH-Key einfügen oder als Datei hochladen.
-        Unterstützt werden RSA und ED25519 (OpenSSH .pub, .pem, .key, .ppk).
+        Lade hier den <span className="font-semibold">öffentlichen SSH-Key</span> für die
+        API-Authentifizierung hoch. Unterstützt werden RSA und ED25519 (OpenSSH .pub, .pem,
+        .key, .ppk).
+      </p>
+      <p className="mt-1 text-sm text-text/60">
+        Optional kannst du stattdessen auch einen privaten SSH-Key einfügen – der Server
+        speichert daraus nur den öffentlichen Schlüssel (für die Verifikation) und einen
+        Hash des Originaltexts, nicht den Private Key selbst.
       </p>
 
       <div className="mt-4 flex gap-2">
@@ -177,7 +183,7 @@ export function ApiKeySshSection({ onSuccess }: Props) {
                 setKeyContent(e.target.value);
                 setMessage(null);
               }}
-              placeholder="z. B. ssh-rsa AAAAB3NzaC1yc2E... oder -----BEGIN OPENSSH PRIVATE KEY----- ..."
+              placeholder="z. B. ssh-rsa AAAAB3NzaC1yc2E... (öffentlicher Key) oder ein kompletter SSH-Key-Block"
               rows={8}
               className="w-full rounded-lg border border-ring bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text/40 outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               spellCheck={false}
