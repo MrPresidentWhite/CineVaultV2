@@ -49,14 +49,8 @@ export function SearchBar() {
     hrefsRef.current = [];
   }, []);
 
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      clearDropdown();
-      return;
-    }
-
-    const t = setTimeout(() => {
+  const fetchSuggestions = useCallback(
+    (q: string) => {
       if (controllerRef.current) controllerRef.current.abort();
       controllerRef.current = new AbortController();
       fetch(`/api/search/suggest?q=${encodeURIComponent(q)}`, {
@@ -78,9 +72,22 @@ export function SearchBar() {
           ];
         })
         .catch(() => clearDropdown());
+    },
+    [clearDropdown]
+  );
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      clearDropdown();
+      return;
+    }
+
+    const t = setTimeout(() => {
+      fetchSuggestions(q);
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [query, clearDropdown]);
+  }, [query, clearDropdown, fetchSuggestions]);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -103,9 +110,16 @@ export function SearchBar() {
   };
 
   const onFocus = () => {
+    const q = query.trim();
+    if (!q) return;
+
     if (result && hrefsRef.current.length > 0) {
       setOpen(true);
+      return;
     }
+
+    // Query ist noch vorhanden, aber keine Ergebnisse im State → neu laden.
+    fetchSuggestions(q);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {

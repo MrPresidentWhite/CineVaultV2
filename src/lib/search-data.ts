@@ -118,6 +118,9 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestResu
 
   const normalized = normalizeSearchQuery(trimmed);
   const variants = expandSearchVariants(trimmed);
+  const asNumber = Number(trimmed);
+  const isIdQuery =
+    Number.isInteger(asNumber) && asNumber > 0 && trimmed === String(asNumber);
   const cacheKey = `${SEARCH_CACHE_KEY_PREFIX}${normalized}`;
   const ttl = SEARCH_SUGGEST_TTL_MIN + Math.floor(Math.random() * (SEARCH_SUGGEST_TTL_JITTER + 1));
 
@@ -165,6 +168,31 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestResu
       }),
     ]);
 
+    // Optionale ID-basierte Treffer (z. B. "8" → Film/Collection/Serie mit ID 8).
+    let mIdMatches: typeof mExact = [];
+    let cIdMatches: typeof cExact = [];
+    let sIdMatches: typeof sExact = [];
+    if (isIdQuery) {
+      const id = asNumber;
+      const [mById, cById, sById] = await Promise.all([
+        prisma.movie.findUnique({
+          where: { id },
+          select: { id: true, title: true, releaseYear: true, posterUrl: true },
+        }),
+        prisma.collection.findUnique({
+          where: { id },
+          select: { id: true, name: true, posterUrl: true, coverUrl: true },
+        }),
+        prisma.series.findUnique({
+          where: { id },
+          select: { id: true, title: true, posterUrl: true },
+        }),
+      ]);
+      if (mById) mIdMatches.push(mById);
+      if (cById) cIdMatches.push(cById);
+      if (sById) sIdMatches.push(sById);
+    }
+
     const movieWherePrefix = {
       OR: variants.map((v) => ({ title: { startsWith: v, mode: QUERY_MODE } })),
     };
@@ -196,9 +224,9 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestResu
       }),
     ]);
 
-    const mSeen = dedupeById([...mExact, ...mPrefix]).map((x) => x.id);
-    const cSeen = dedupeById([...cExact, ...cPrefix]).map((x) => x.id);
-    const sSeen = dedupeById([...sExact, ...sPrefix]).map((x) => x.id);
+    const mSeen = dedupeById([...mIdMatches, ...mExact, ...mPrefix]).map((x) => x.id);
+    const cSeen = dedupeById([...cIdMatches, ...cExact, ...cPrefix]).map((x) => x.id);
+    const sSeen = dedupeById([...sIdMatches, ...sExact, ...sPrefix]).map((x) => x.id);
     const mNeed = Math.max(MOVIE_CAP - mSeen.length, 0);
     const cNeed = Math.max(COLLECTION_CAP - cSeen.length, 0);
     const sNeed = Math.max(SERIES_CAP - sSeen.length, 0);
@@ -255,9 +283,24 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestResu
         : [],
     ]);
 
-    const mMerged = dedupeById([...mExact, ...mPrefix, ...mContains]).slice(0, MOVIE_CAP);
-    const cMerged = dedupeById([...cExact, ...cPrefix, ...cContains]).slice(0, COLLECTION_CAP);
-    const sMerged = dedupeById([...sExact, ...sPrefix, ...sContains]).slice(0, SERIES_CAP);
+    const mMerged = dedupeById([
+      ...mIdMatches,
+      ...mExact,
+      ...mPrefix,
+      ...mContains,
+    ]).slice(0, MOVIE_CAP);
+    const cMerged = dedupeById([
+      ...cIdMatches,
+      ...cExact,
+      ...cPrefix,
+      ...cContains,
+    ]).slice(0, COLLECTION_CAP);
+    const sMerged = dedupeById([
+      ...sIdMatches,
+      ...sExact,
+      ...sPrefix,
+      ...sContains,
+    ]).slice(0, SERIES_CAP);
 
     return {
       movies: mMerged.map((m) => ({
