@@ -135,6 +135,29 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Check NEXT_SERVER_ACTIONS_ENCRYPTION_KEY consistency
+        run: |
+          FILE_KEY=$(grep '^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' .env | head -n1 | cut -d= -f2- | tr -d '\r')
+          SECRET_KEY="${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}"
+
+          if [ -z "$FILE_KEY" ] || [ -z "$SECRET_KEY" ]; then
+            echo "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY fehlt entweder in .env oder in den GitHub Secrets."
+            exit 1
+          fi
+
+          if [ "${#FILE_KEY}" -ne 64 ] || [ "${#SECRET_KEY}" -ne 64 ]; then
+            echo "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY hat nicht die erwartete Länge (64 Hex-Zeichen, 32 Byte)."
+            exit 1
+          fi
+
+          if [ "$FILE_KEY" != "$SECRET_KEY" ]; then
+            echo "Drift: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY in .env und in den GitHub Secrets unterscheiden sich."
+            echo "Bitte den Key nur bewusst rotieren und danach in .env und Secrets identisch setzen."
+            exit 1
+          fi
+
+          echo "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY ist konsistent."
+
       - uses: actions/download-artifact@v4
         with:
           name: lint-output
