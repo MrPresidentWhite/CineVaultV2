@@ -158,9 +158,7 @@ async function main() {
   const buildOutcome = process.env.BUILD_OUTCOME ?? "";
   const loggingCheckOutcome = process.env.LOGGING_CHECK_OUTCOME ?? "";
 
-  const lintTail = readTail(LINT_PATH);
   const testTail = readTail(TEST_PATH);
-  const buildTail = readTail(BUILD_PATH);
   const loggingCheckContent = readFull(LOGGING_CHECK_PATH);
 
   const testResult = testTail ? parseTestOutput(testTail) : null;

@@ -169,9 +169,9 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestResu
     ]);
 
     // Optionale ID-basierte Treffer (z. B. "8" → Film/Collection/Serie mit ID 8).
-    let mIdMatches: typeof mExact = [];
-    let cIdMatches: typeof cExact = [];
-    let sIdMatches: typeof sExact = [];
+    const mIdMatches: typeof mExact = [];
+    const cIdMatches: typeof cExact = [];
+    const sIdMatches: typeof sExact = [];
     if (isIdQuery) {
       const id = asNumber;
       const [mById, cById, sById] = await Promise.all([
