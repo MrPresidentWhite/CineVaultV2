@@ -94,10 +94,41 @@ export function MovieEditModal({ movie, users }: Props) {
       return;
     }
 
-    const sizeAfterVal = (form.querySelector('input[name="sizeAfterBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
-    const sizeBeforeVal = (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
-    const sizeAfterNum = sizeAfterVal ? Number(sizeAfterVal) : 0;
-    const sizeBeforeNum = sizeBeforeVal ? Number(sizeBeforeVal) : 0;
+    const sizeAfterVal =
+      (form.querySelector('input[name="sizeAfterBytes"]') as HTMLInputElement)?.value ??
+      "";
+    const sizeBeforeVal =
+      (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value ??
+      "";
+
+    const parseBytes = (raw: string, label: string): number | null | "error" => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      const num = Number(trimmed);
+      if (!Number.isFinite(num) || num < 0) {
+        alert(`Ungültige Zahl für „${label}“.`);
+        return "error";
+      }
+      const normalized = trimmed.replace(/[.,\s_]/g, "");
+      if (!/^\d+$/.test(normalized)) {
+        alert(`Ungültige Zahl für „${label}“.`);
+        return "error";
+      }
+      const asInt = Number(normalized);
+      if (!Number.isFinite(asInt) || asInt < 0) {
+        alert(`Ungültige Zahl für „${label}“.`);
+        return "error";
+      }
+      return asInt;
+    };
+
+    const parsedBefore = parseBytes(sizeBeforeVal, "Größe vorher (Bytes)");
+    if (parsedBefore === "error") return;
+    const parsedAfter = parseBytes(sizeAfterVal, "Größe nachher (Bytes)");
+    if (parsedAfter === "error") return;
+
+    const sizeBeforeNum = parsedBefore ?? 0;
+    const sizeAfterNum = parsedAfter ?? 0;
     if (hasSizeValidationError(sizeAfterNum, sizeBeforeNum)) {
       alert(SIZE_VALIDATION_ERROR_MESSAGE);
       return;
@@ -327,32 +358,30 @@ export function MovieEditModal({ movie, users }: Props) {
                 <label className="block">
                   <span className="block text-sm text-text/70 mb-1">Größe vorher</span>
                   <input
-                    type="number"
+                  type="text"
                     name="sizeBeforeBytes"
                     defaultValue={
                       movie.sizeBeforeBytes != null
                         ? String(movie.sizeBeforeBytes)
                         : ""
                     }
-                    min={0}
-                    inputMode="numeric"
-                    placeholder="Bytes, z. B. 80530636800"
+                  inputMode="numeric"
+                  placeholder="Bytes (Trennzeichen wie . , _ erlaubt)"
                     className="input w-full"
                   />
                 </label>
                 <label className="block">
                   <span className="block text-sm text-text/70 mb-1">Größe nachher</span>
                   <input
-                    type="number"
+                  type="text"
                     name="sizeAfterBytes"
                     defaultValue={
                       movie.sizeAfterBytes != null
                         ? String(movie.sizeAfterBytes)
                         : ""
                     }
-                    min={0}
-                    inputMode="numeric"
-                    placeholder="Bytes, z. B. 69835161600"
+                  inputMode="numeric"
+                  placeholder="Bytes (Trennzeichen wie . , _ erlaubt)"
                     className="input w-full"
                   />
                 </label>

@@ -65,10 +65,41 @@ export function EpisodeEditModal({ episode, onClose }: Props) {
     const form = formRef.current;
     if (!form) return;
 
-    const sizeAfterVal = (form.querySelector('input[name="sizeAfterBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
-    const sizeBeforeVal = (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value?.trim() ?? "";
-    const sizeAfterNum = sizeAfterVal ? Number(sizeAfterVal) : 0;
-    const sizeBeforeNum = sizeBeforeVal ? Number(sizeBeforeVal) : 0;
+    const sizeAfterVal =
+      (form.querySelector('input[name="sizeAfterBytes"]') as HTMLInputElement)?.value ??
+      "";
+    const sizeBeforeVal =
+      (form.querySelector('input[name="sizeBeforeBytes"]') as HTMLInputElement)?.value ??
+      "";
+
+    const parseBytes = (raw: string, label: string): number | null | "error" => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      const num = Number(trimmed);
+      if (!Number.isFinite(num) || num < 0) {
+        alert(`Ungültige Zahl für „${label}“.`);
+        return "error";
+      }
+      const normalized = trimmed.replace(/[.,\s_]/g, "");
+      if (!/^\d+$/.test(normalized)) {
+        alert(`Ungültige Zahl für „${label}“.`);
+        return "error";
+      }
+      const asInt = Number(normalized);
+      if (!Number.isFinite(asInt) || asInt < 0) {
+        alert(`Ungültige Zahl für „${label}“.`);
+        return "error";
+      }
+      return asInt;
+    };
+
+    const parsedBefore = parseBytes(sizeBeforeVal, "Dateigröße vorher (Bytes)");
+    if (parsedBefore === "error") return;
+    const parsedAfter = parseBytes(sizeAfterVal, "Dateigröße nachher (Bytes)");
+    if (parsedAfter === "error") return;
+
+    const sizeBeforeNum = parsedBefore ?? 0;
+    const sizeAfterNum = parsedAfter ?? 0;
     if (hasSizeValidationError(sizeAfterNum, sizeBeforeNum)) {
       alert(SIZE_VALIDATION_ERROR_MESSAGE);
       return;
@@ -138,32 +169,30 @@ export function EpisodeEditModal({ episode, onClose }: Props) {
               <label>
                 <span>Dateigröße vorher (Bytes)</span>
                 <input
-                  type="number"
+                  type="text"
                   name="sizeBeforeBytes"
                   defaultValue={
                     episode.sizeBeforeBytes != null
                       ? String(episode.sizeBeforeBytes)
                       : ""
                   }
-                  min={0}
                   inputMode="numeric"
-                  placeholder="z. B. 80530636800"
+                  placeholder="Bytes (Trennzeichen wie . , _ erlaubt)"
                   className="input"
                 />
               </label>
               <label>
                 <span>Dateigröße nachher (Bytes)</span>
                 <input
-                  type="number"
+                  type="text"
                   name="sizeAfterBytes"
                   defaultValue={
                     episode.sizeAfterBytes != null
                       ? String(episode.sizeAfterBytes)
                       : ""
                   }
-                  min={0}
                   inputMode="numeric"
-                  placeholder="z. B. 69835161600"
+                  placeholder="Bytes (Trennzeichen wie . , _ erlaubt)"
                   className="input"
                 />
               </label>
