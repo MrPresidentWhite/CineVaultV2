@@ -44,12 +44,28 @@ export async function POST(
     data.runtimeMin = null;
   }
   if (body.sizeBeforeBytes !== undefined && body.sizeBeforeBytes !== "") {
-    data.sizeBeforeBytes = BigInt(Number(body.sizeBeforeBytes));
+    const raw = String(body.sizeBeforeBytes);
+    const normalized = raw.replace(/[.\s_]/g, "");
+    if (!/^\d+$/.test(normalized)) {
+      return NextResponse.json(
+        { ok: false, error: "Ungültige Zahl für „Dateigröße vorher (Bytes)“." },
+        { status: 400 }
+      );
+    }
+    data.sizeBeforeBytes = BigInt(normalized);
   } else if (body.sizeBeforeBytes === "") {
     data.sizeBeforeBytes = null;
   }
   if (body.sizeAfterBytes !== undefined && body.sizeAfterBytes !== "") {
-    data.sizeAfterBytes = BigInt(Number(body.sizeAfterBytes));
+    const raw = String(body.sizeAfterBytes);
+    const normalized = raw.replace(/[.\s_]/g, "");
+    if (!/^\d+$/.test(normalized)) {
+      return NextResponse.json(
+        { ok: false, error: "Ungültige Zahl für „Dateigröße nachher (Bytes)“." },
+        { status: 400 }
+      );
+    }
+    data.sizeAfterBytes = BigInt(normalized);
   } else if (body.sizeAfterBytes === "") {
     data.sizeAfterBytes = null;
   }
