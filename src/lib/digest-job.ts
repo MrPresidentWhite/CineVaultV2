@@ -246,15 +246,18 @@ export async function sendStatusDigestJob(): Promise<void> {
   // Discord: nur UPLOADED/ARCHIVED (eine Nachricht pro Status)
   // Jeder Film erscheint nur unter seinem neuesten Status (wegen orderBy desc + seenMovies).
   const statusToMovies = new Map<Status, string[]>();
-  DISCORD_RELEVANT_STATUSES.forEach((s) => statusToMovies.set(s, []));
   const seenMovies = new Set<number>();
   for (const change of openChanges) {
     if (seenMovies.has(change.movieId)) continue;
     seenMovies.add(change.movieId);
-    const list = statusToMovies.get(change.to as Status);
-    if (list) {
-      list.push(`${change.movie.title} (${change.movie.releaseYear})`);
+    const toStatus = String(change.to).toUpperCase() as Status;
+    if (!DISCORD_RELEVANT_STATUSES.includes(toStatus)) continue;
+    let list = statusToMovies.get(toStatus);
+    if (!list) {
+      list = [];
+      statusToMovies.set(toStatus, list);
     }
+    list.push(`${change.movie.title} (${change.movie.releaseYear})`);
   }
   for (const [status, movies] of statusToMovies) {
     if (movies.length === 0) continue;
@@ -307,11 +310,14 @@ export async function sendStatusDigestJob(): Promise<void> {
 
     let sentCount = 0;
     let errorCount = 0;
+    const normalizedStatus = (s: Status | string) => String(s).toUpperCase();
     for (const user of users) {
-      const userStatuses = user.statusPreferences.map((p: { status: Status }) => p.status);
-      if (userStatuses.length === 0) continue;
+      const userStatusSet = new Set(
+        user.statusPreferences.map((p: { status: Status }) => normalizedStatus(p.status))
+      );
+      if (userStatusSet.size === 0) continue;
       const relevantSummaries = summaries.filter((s) =>
-        userStatuses.includes(s.finalStatus as Status)
+        userStatusSet.has(normalizedStatus(s.finalStatus))
       );
       if (relevantSummaries.length === 0) continue;
       try {
