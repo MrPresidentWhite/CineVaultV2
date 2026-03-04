@@ -47,13 +47,6 @@ export async function POST(
 
   if (body.sizeBeforeBytes !== undefined && body.sizeBeforeBytes !== "") {
     const raw = String(body.sizeBeforeBytes).trim();
-    const num = Number(raw);
-    if (!Number.isFinite(num) || num < 0) {
-      return NextResponse.json(
-        { ok: false, error: "Ungültige Zahl für „Größe vorher (Bytes)“." },
-        { status: 400 }
-      );
-    }
     const normalized = raw.replace(/[.,\s_]/g, "");
     if (!/^\d+$/.test(normalized)) {
       return NextResponse.json(
@@ -65,13 +58,6 @@ export async function POST(
   }
   if (body.sizeAfterBytes !== undefined && body.sizeAfterBytes !== "") {
     const raw = String(body.sizeAfterBytes).trim();
-    const num = Number(raw);
-    if (!Number.isFinite(num) || num < 0) {
-      return NextResponse.json(
-        { ok: false, error: "Ungültige Zahl für „Größe nachher (Bytes)“." },
-        { status: 400 }
-      );
-    }
     const normalized = raw.replace(/[.,\s_]/g, "");
     if (!/^\d+$/.test(normalized)) {
       return NextResponse.json(

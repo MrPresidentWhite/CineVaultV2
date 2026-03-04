@@ -104,19 +104,14 @@ export function MovieEditModal({ movie, users }: Props) {
     const parseBytes = (raw: string, label: string): number | null | "error" => {
       const trimmed = raw.trim();
       if (!trimmed) return null;
-      const num = Number(trimmed);
-      if (!Number.isFinite(num) || num < 0) {
-        alert(`Ungültige Zahl für „${label}“.`);
-        return "error";
-      }
       const normalized = trimmed.replace(/[.,\s_]/g, "");
       if (!/^\d+$/.test(normalized)) {
-        alert(`Ungültige Zahl für „${label}“.`);
+        alert("Ungültige Zahl für " + label + ".");
         return "error";
       }
       const asInt = Number(normalized);
       if (!Number.isFinite(asInt) || asInt < 0) {
-        alert(`Ungültige Zahl für „${label}“.`);
+        alert("Ungültige Zahl für " + label + ".");
         return "error";
       }
       return asInt;
