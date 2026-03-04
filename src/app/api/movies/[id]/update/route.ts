@@ -46,8 +46,15 @@ export async function POST(
   if (body.assignedToUserId != null) data.assignedToUserId = Number(body.assignedToUserId) || null;
 
   if (body.sizeBeforeBytes !== undefined && body.sizeBeforeBytes !== "") {
-    const raw = String(body.sizeBeforeBytes);
-    const normalized = raw.replace(/[.\s_]/g, "");
+    const raw = String(body.sizeBeforeBytes).trim();
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < 0) {
+      return NextResponse.json(
+        { ok: false, error: "Ungültige Zahl für „Größe vorher (Bytes)“." },
+        { status: 400 }
+      );
+    }
+    const normalized = raw.replace(/[.,\s_]/g, "");
     if (!/^\d+$/.test(normalized)) {
       return NextResponse.json(
         { ok: false, error: "Ungültige Zahl für „Größe vorher (Bytes)“." },
@@ -57,8 +64,15 @@ export async function POST(
     data.sizeBeforeBytes = BigInt(normalized);
   }
   if (body.sizeAfterBytes !== undefined && body.sizeAfterBytes !== "") {
-    const raw = String(body.sizeAfterBytes);
-    const normalized = raw.replace(/[.\s_]/g, "");
+    const raw = String(body.sizeAfterBytes).trim();
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < 0) {
+      return NextResponse.json(
+        { ok: false, error: "Ungültige Zahl für „Größe nachher (Bytes)“." },
+        { status: 400 }
+      );
+    }
+    const normalized = raw.replace(/[.,\s_]/g, "");
     if (!/^\d+$/.test(normalized)) {
       return NextResponse.json(
         { ok: false, error: "Ungültige Zahl für „Größe nachher (Bytes)“." },
