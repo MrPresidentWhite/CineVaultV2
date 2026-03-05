@@ -157,9 +157,17 @@ export async function POST(request: Request) {
   const safePath = getSafeCallbackPath(callbackUrl, base);
 
   const opts = getSessionCookieOptions();
+  const isMobileClient =
+    request.headers.get("X-Client")?.toLowerCase() === "cinevaultmobile";
+
   const res = NextResponse.json({
     ok: true,
     redirect: new URL(safePath, base).toString(),
+    ...(isMobileClient && {
+      sid,
+      userId: user.id,
+      effectiveRole,
+    }),
   });
 
   res.cookies.set(SESSION_COOKIE_NAME, sid, {

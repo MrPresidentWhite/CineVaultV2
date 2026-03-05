@@ -153,6 +153,19 @@ export async function POST(request: Request) {
     }
     if (!trusted) {
       const payload = createPending2FaPayload(user.id);
+      const isMobileClient =
+        request.headers.get("X-Client")?.toLowerCase() === "cinevaultmobile";
+      if (isMobileClient) {
+        const res = NextResponse.json({ requires2fa: true }, { status: 200 });
+        res.cookies.set(PENDING_2FA_COOKIE_NAME, payload, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: PENDING_2FA_MAX_AGE_SEC,
+          path: "/",
+        });
+        return res;
+      }
       const res = NextResponse.redirect(
         new URL(
           `login/2fa?callbackUrl=${encodeURIComponent(callbackUrl)}`,
@@ -189,6 +202,26 @@ export async function POST(request: Request) {
 
   const opts = getSessionCookieOptions();
   const safePath = getSafeCallbackPath(callbackUrl, base);
+  const isMobileClient =
+    request.headers.get("X-Client")?.toLowerCase() === "cinevaultmobile";
+
+  if (isMobileClient) {
+    const response = NextResponse.json({
+      ok: true,
+      sid,
+      userId: user.id,
+      effectiveRole,
+    });
+    response.cookies.set(SESSION_COOKIE_NAME, sid, {
+      httpOnly: opts.httpOnly,
+      secure: opts.secure,
+      sameSite: opts.sameSite,
+      maxAge: opts.maxAge,
+      path: opts.path,
+    });
+    return response;
+  }
+
   const response = NextResponse.redirect(new URL(safePath, base), {
     status: 302,
   });

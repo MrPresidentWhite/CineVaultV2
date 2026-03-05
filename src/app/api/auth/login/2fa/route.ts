@@ -207,21 +207,24 @@ export async function POST(request: Request) {
 
   const opts = getSessionCookieOptions();
   const safePath = getSafeCallbackPath(callbackUrl, base);
-  const response = NextResponse.redirect(new URL(safePath, base), { status: 302 });
+  const isMobileClient =
+    request.headers.get("X-Client")?.toLowerCase() === "cinevaultmobile";
 
-  response.cookies.set(SESSION_COOKIE_NAME, sid, {
-    httpOnly: opts.httpOnly,
-    secure: opts.secure,
-    sameSite: opts.sameSite,
-    maxAge: opts.maxAge,
-    path: opts.path,
-  });
+  const setSessionCookie = (res: NextResponse) => {
+    res.cookies.set(SESSION_COOKIE_NAME, sid, {
+      httpOnly: opts.httpOnly,
+      secure: opts.secure,
+      sameSite: opts.sameSite,
+      maxAge: opts.maxAge,
+      path: opts.path,
+    });
+    res.cookies.delete(PENDING_2FA_COOKIE_NAME);
+  };
 
-  response.cookies.delete(PENDING_2FA_COOKIE_NAME);
-
+  let trustToken: string | null = null;
   if (trustDevice) {
-    const token = randomBytes(32).toString("base64url");
-    const tokenHash = hashTrustToken(token);
+    trustToken = randomBytes(32).toString("base64url");
+    const tokenHash = hashTrustToken(trustToken);
     const expiresAt = new Date(Date.now() + TRUST_MAX_AGE_SEC * 1000);
     await prisma.trustedDevice.create({
       data: {
@@ -231,7 +234,42 @@ export async function POST(request: Request) {
         expiresAt,
       },
     });
-    response.cookies.set(TRUST_COOKIE_NAME, token, {
+    if (isMobileClient) {
+      const res = NextResponse.json({
+        ok: true,
+        sid,
+        userId: user.id,
+        effectiveRole,
+      });
+      setSessionCookie(res);
+      res.cookies.set(TRUST_COOKIE_NAME, trustToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: TRUST_MAX_AGE_SEC,
+        path: "/",
+      });
+      return res;
+    }
+  }
+
+  if (isMobileClient) {
+    const res = NextResponse.json({
+      ok: true,
+      sid,
+      userId: user.id,
+      effectiveRole,
+    });
+    setSessionCookie(res);
+    return res;
+  }
+
+  const response = NextResponse.redirect(new URL(safePath, base), {
+    status: 302,
+  });
+  setSessionCookie(response);
+  if (trustToken) {
+    response.cookies.set(TRUST_COOKIE_NAME, trustToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

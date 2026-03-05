@@ -1,6 +1,6 @@
 /**
  * User-Agent parsen (Browser, OS, Gerätetyp).
- * Nutzt „platform“ wie im alten CineVault-Projekt.
+ * Zuerst Erkennung eigener Apps (z. B. CineVault Mobile), danach „platform“ für Standard-Browser.
  */
 
 import type { DeviceType } from "./device";
@@ -15,6 +15,39 @@ export type ParsedDevice = {
   deviceType: DeviceType;
 };
 
+/** Custom User-Agents (App-Name, optional Version aus /x.y.z, OS/deviceType). */
+const CUSTOM_UA_PATTERNS: Array<{
+  test: (ua: string) => boolean;
+  browser: (ua: string) => string;
+  os?: string;
+  deviceType: DeviceType;
+}> = [
+  {
+    test: (ua) => /^CineVault-Mobile\//i.test(ua),
+    browser: (ua) => {
+      const match = ua.match(/^CineVault-Mobile\/([\d.]+)/i);
+      const ver = match?.[1];
+      return ver ? `CineVault Mobile ${ver}` : "CineVault Mobile";
+    },
+    os: "Mobile (Flutter)",
+    deviceType: "mobile",
+  },
+];
+
+function tryCustomUserAgent(ua: string): ParsedDevice | null {
+  const trimmed = ua.trim();
+  for (const { test, browser, os, deviceType } of CUSTOM_UA_PATTERNS) {
+    if (test(trimmed)) {
+      return {
+        browser: browser(trimmed),
+        os: os ?? "Unbekanntes OS",
+        deviceType,
+      };
+    }
+  }
+  return null;
+}
+
 export function parseUserAgent(userAgent: string | null): ParsedDevice {
   const fallback: ParsedDevice = {
     browser: "Unbekannter Browser",
@@ -23,6 +56,9 @@ export function parseUserAgent(userAgent: string | null): ParsedDevice {
   };
 
   if (!userAgent || !userAgent.trim()) return fallback;
+
+  const custom = tryCustomUserAgent(userAgent);
+  if (custom) return custom;
 
   try {
     const info = platform.parse(userAgent) as {
